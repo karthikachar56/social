@@ -5,8 +5,6 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
-const multer = require('multer');
-const fs = require('fs');
 
 dotenv.config();
 
@@ -18,27 +16,6 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventhub';
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Ensure uploads folder exists
-const uploadsDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-// Multer config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2) + ext);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg','image/png','image/gif','image/webp'];
-    cb(null, allowed.includes(file.mimetype));
-  }
-});
 
 mongoose.connect(MONGO_URI)
   .then(() => { console.log('Connected to MongoDB'); seedAdmins(); })
@@ -96,13 +73,6 @@ const authAdmin = (req, res, next) => {
     res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
-
-// --- FILE UPLOAD ---
-app.post('/api/upload', authAdmin, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No image file provided or invalid type.' });
-  const url = '/uploads/' + req.file.filename;
-  res.json({ url });
-});
 
 // --- ADMIN AUTH ---
 app.post('/api/admin/login', async (req, res) => {

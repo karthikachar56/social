@@ -705,16 +705,26 @@ function adminApp() {
       if (type === 'event') this.eventUploading = true;
       else this.newsUploading = true;
       try {
-        const fd = new FormData();
-        fd.append('image', file);
-        const r = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + TOKEN() }, body: fd });
-        const d = await r.json();
-        if (d.error) { this.showToast(d.error, 'error'); return; }
-        if (type === 'event') this.eventForm.image = d.url;
-        else this.newsForm.image = d.url;
-        this.showToast('Photo uploaded! ✓', 'success');
-      } catch { this.showToast('Upload failed. Try again.', 'error'); }
-      finally {
+        if (file.size > 5 * 1024 * 1024) {
+          this.showToast('File is too large. Max size is 5MB.', 'error');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (type === 'event') this.eventForm.image = e.target.result;
+          else this.newsForm.image = e.target.result;
+          this.showToast('Photo uploaded! ✓', 'success');
+          if (type === 'event') this.eventUploading = false;
+          else this.newsUploading = false;
+        };
+        reader.onerror = () => {
+          this.showToast('Failed to read file.', 'error');
+          if (type === 'event') this.eventUploading = false;
+          else this.newsUploading = false;
+        };
+        reader.readAsDataURL(file);
+      } catch {
+        this.showToast('Upload failed. Try again.', 'error');
         if (type === 'event') this.eventUploading = false;
         else this.newsUploading = false;
       }
