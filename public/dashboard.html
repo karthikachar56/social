@@ -122,15 +122,6 @@
                     <span x-show="!sidebarCollapsed" class="text-sm">Explore</span>
                 </a>
 
-                <!-- Messages -->
-                <a href="#" @click.prevent="activeTab = 'messages'; closeAllDrawers()" class="flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group relative"
-                   :class="activeTab === 'messages' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
-                    <div class="relative">
-                        <i data-lucide="send" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
-                        <span class="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white font-bold rounded-full w-4 h-4 flex items-center justify-center">3</span>
-                    </div>
-                    <span x-show="!sidebarCollapsed" class="text-sm">Messages</span>
-                </a>
 
                 <!-- Notifications (Triggers Drawer) -->
                 <button @click="toggleDrawer('notifications')" class="w-full flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group relative"
@@ -256,11 +247,7 @@
                 InstaVibe
             </a>
             <div class="flex items-center gap-4">
-                <!-- Mobile create post button removed for index.html -->
-                <button @click="activeTab = 'messages'; closeAllDrawers()" class="relative text-neutral-800 dark:text-neutral-200 hover:text-brand-pink">
-                    <i data-lucide="send" class="w-6 h-6"></i>
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-[8px] text-white font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">3</span>
-                </button>
+
                 <button @click="toggleDarkMode()" class="text-yellow-500 hover:scale-105 transition">
                     <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-5 h-5"></i>
                 </button>
@@ -364,10 +351,7 @@
                                                 <button @click="focusCommentInput(post.id)" class="hover:opacity-70">
                                                     <i data-lucide="message-circle" class="w-6 h-6"></i>
                                                 </button>
-                                                <!-- Share Button -->
-                                                <button class="hover:opacity-70" @click="activeTab = 'messages'; selectChat(1)">
-                                                    <i data-lucide="send" class="w-6 h-6"></i>
-                                                </button>
+
                                             </div>
                                             <!-- Bookmark -->
                                             <button @click="post.bookmarked = !post.bookmarked" class="transition duration-150 active:scale-125">
@@ -605,131 +589,6 @@
                                     <div class="flex items-center gap-1.5">
                                         <i data-lucide="message-circle" class="w-5 h-5 fill-current"></i>
                                         <span x-text="post.comments.length"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- 5. MESSAGES TAB (Inbox) -->
-                <div x-show="activeTab === 'messages'" class="bg-white dark:bg-black border border-igLight-border dark:border-igDark-border rounded-xl shadow-sm h-[80vh] flex overflow-hidden" x-transition>
-                    <!-- Chat Listing (Left Panel) -->
-                    <div class="w-full md:w-80 border-r border-igLight-border dark:border-igDark-border flex flex-col"
-                         :class="activeChatId !== null ? 'hidden md:flex' : 'flex'">
-                        <!-- Header with Username -->
-                        <div class="p-5 border-b border-igLight-border dark:border-igDark-border flex items-center justify-between">
-                            <h2 class="font-bold text-lg flex items-center gap-2" x-text="currentUser.username"></h2>
-                            <button class="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg text-neutral-800 dark:text-neutral-200">
-                                <i data-lucide="square-edit-run" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Chat List -->
-                        <div class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1">
-                            <template x-for="chat in chats" :key="chat.id">
-                                <div @click="selectChat(chat.id)"
-                                     class="flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-950 transition"
-                                     :class="activeChatId === chat.id ? 'bg-neutral-50 dark:bg-neutral-900' : ''">
-                                    <div class="flex items-center gap-3">
-                                        <div class="relative">
-                                            <img :src="chat.avatar" class="w-12 h-12 rounded-full object-cover">
-                                            <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-black" x-show="chat.online"></div>
-                                        </div>
-                                        <div class="max-w-[150px]">
-                                            <p class="font-semibold text-sm truncate" x-text="chat.username"></p>
-                                            <p class="text-xs text-neutral-400 truncate mt-0.5" x-text="chat.lastMessage"></p>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-[10px] text-neutral-400" x-text="chat.time"></p>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Chat Body (Right Panel) -->
-                    <div class="flex-1 flex flex-col bg-white dark:bg-black"
-                         :class="activeChatId === null ? 'hidden md:flex items-center justify-center p-8' : 'flex'">
-                        
-                        <template x-if="activeChatId === null">
-                            <div class="text-center space-y-4">
-                                <div class="w-24 h-24 rounded-full border-2 border-black dark:border-white flex items-center justify-center mx-auto text-neutral-800 dark:text-neutral-100">
-                                    <i data-lucide="send" class="w-12 h-12 rotate-12"></i>
-                                </div>
-                                <h3 class="text-xl font-bold">Your Messages</h3>
-                                <p class="text-sm text-neutral-400 max-w-[280px]">Send private photos and messages to a friend or group.</p>
-                                <button @click="selectChat(1)" class="px-5 py-2.5 bg-brand-pink hover:bg-opacity-95 text-white font-semibold rounded-lg text-sm transition">Send Message</button>
-                            </div>
-                        </template>
-
-                        <template x-if="activeChatId !== null">
-                            <div class="flex-1 flex flex-col h-full overflow-hidden">
-                                <!-- Chat Header -->
-                                <div class="p-4 border-b border-igLight-border dark:border-igDark-border flex items-center justify-between bg-white dark:bg-black">
-                                    <div class="flex items-center gap-3">
-                                        <!-- Mobile Back Button -->
-                                        <button @click="activeChatId = null" class="md:hidden p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-500">
-                                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                                        </button>
-                                        <div class="relative">
-                                            <img :src="chats.find(c => c.id === activeChatId)?.avatar" class="w-10 h-10 rounded-full object-cover">
-                                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-black" x-show="chats.find(c => c.id === activeChatId)?.online"></div>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-sm" x-text="chats.find(c => c.id === activeChatId)?.username"></p>
-                                            <p class="text-[10px] text-neutral-400" x-text="chats.find(c => c.id === activeChatId)?.online ? 'Active now' : 'Offline'"></p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-4 text-neutral-600 dark:text-neutral-400">
-                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="phone" class="w-5 h-5"></i></button>
-                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="video" class="w-5 h-5"></i></button>
-                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="info" class="w-5 h-5"></i></button>
-                                    </div>
-                                </div>
-
-                                <!-- Messages List Container -->
-                                <div id="chat-scroll-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 dark:bg-neutral-950/20">
-                                    <template x-for="msg in chats.find(c => c.id === activeChatId)?.messages">
-                                        <div class="flex flex-col" :class="msg.sender === 'me' ? 'items-end' : 'items-start'">
-                                            <div class="max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm"
-                                                 :class="msg.sender === 'me' ? 'bg-brand-pink text-white rounded-br-none' : 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white rounded-bl-none'">
-                                                <p x-text="msg.text"></p>
-                                            </div>
-                                            <span class="text-[9px] text-neutral-400 mt-1 px-1" x-text="msg.time"></span>
-                                        </div>
-                                    </template>
-                                    
-                                    <!-- Typing Indicator -->
-                                    <div class="flex items-center gap-2" x-show="isTyping" x-transition>
-                                        <div class="bg-neutral-200 dark:bg-neutral-800 rounded-full px-4 py-2 text-xs flex gap-1 items-center">
-                                            <span class="animate-bounce" style="animation-delay: 0.1s">•</span>
-                                            <span class="animate-bounce" style="animation-delay: 0.2s">•</span>
-                                            <span class="animate-bounce" style="animation-delay: 0.3s">•</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Input Box -->
-                                <div class="p-4 border-t border-igLight-border dark:border-igDark-border bg-white dark:bg-black">
-                                    <div class="flex items-center gap-3 border border-neutral-300 dark:border-neutral-800 rounded-full px-4 py-2">
-                                        <button class="text-neutral-500 hover:text-black dark:hover:text-white">
-                                            <i data-lucide="smile" class="w-5 h-5"></i>
-                                        </button>
-                                        <input type="text" placeholder="Message..." 
-                                               class="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-400 focus:ring-0 dark:text-white"
-                                               x-model="newMessageText"
-                                               @keyup.enter="sendMessage()">
-                                        <button @click="sendMessage()" 
-                                                class="text-sm text-brand-pink font-semibold hover:text-purple-600"
-                                                x-show="newMessageText.trim().length > 0">
-                                            Send
-                                        </button>
-                                        <div class="flex items-center gap-3 text-neutral-500" x-show="newMessageText.trim().length === 0">
-                                            <button class="hover:text-black dark:hover:text-white"><i data-lucide="image" class="w-5 h-5"></i></button>
-                                            <button class="hover:text-black dark:hover:text-white"><i data-lucide="heart" class="w-5 h-5"></i></button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
