@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaVibe - Social Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            pink: '#E1306C',
+                            purple: '#833AB4',
+                            orange: '#F56040',
+                            yellow: '#FCAF45',
+                        },
+                        igDark: {
+                            bg: '#000000',
+                            elevated: '#121212',
+                            border: '#262626',
+                            text: '#f5f5f5',
+                            textMuted: '#a8a8a8'
+                        },
+                        igLight: {
+                            bg: '#ffffff',
+                            elevated: '#fafafa',
+                            border: '#dbdbdb',
+                            text: '#262626',
+                            textMuted: '#737373'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- AlpineJS for reactivity & transitions -->
+    <script defer src="https://unpkg.com/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        /* Hide scrollbars but keep functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Custom Keyframe Animations */
+        @keyframes heartPulse {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 0.9; }
+            70% { transform: scale(0.9); opacity: 0.9; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .animate-heart-pulse {
+            animation: heartPulse 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+        .slide-in-drawer {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-black text-igLight-text dark:text-igDark-text font-sans antialiased transition-colors duration-300" 
+      x-data="appState()" x-init="init()">
+
+    <div class="flex min-h-screen">
+        
+        <!-- SIDEBAR: Desktop / Tablet Left Panel -->
+        <aside class="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-igLight-border dark:border-igDark-border bg-white dark:bg-black p-3 xl:p-6 transition-all duration-300 z-40"
+               :class="sidebarCollapsed ? 'w-20' : 'w-64 xl:w-72'">
+            
+            <!-- Brand Logo -->
+            <div class="py-4 px-2 mb-6 flex items-center justify-between">
+                <a href="#" @click.prevent="activeTab = 'home'; closeAllDrawers()" class="flex items-center gap-3">
+                    <span x-show="!sidebarCollapsed" class="text-2xl font-bold font-serif tracking-wider bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+                        InstaVibe
+                    </span>
+                    <span x-show="sidebarCollapsed" class="text-2xl font-bold bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+                        IV
+                    </span>
+                </a>
+                <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden xl:block text-igLight-textMuted dark:text-igDark-textMuted hover:text-black dark:hover:text-white transition">
+                    <i data-lucide="chevrons-left-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links (Create button removed for users) -->
+            <nav class="flex-1 space-y-1">
+                <!-- Home -->
+                <a href="#" @click.prevent="activeTab = 'home'; closeAllDrawers()" class="flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group"
+                   :class="activeTab === 'home' && !activeDrawer ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <i data-lucide="home" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm">Home</span>
+                </a>
+
+                <!-- Search (Triggers Drawer) -->
+                <button @click="toggleDrawer('search')" class="w-full flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group relative"
+                   :class="activeDrawer === 'search' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <i data-lucide="search" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm">Search</span>
+                </button>
+
+                <!-- Explore -->
+                <a href="#" @click.prevent="activeTab = 'explore'; closeAllDrawers()" class="flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group"
+                   :class="activeTab === 'explore' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <i data-lucide="compass" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm">Explore</span>
+                </a>
+
+                <!-- Messages -->
+                <a href="#" @click.prevent="activeTab = 'messages'; closeAllDrawers()" class="flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group relative"
+                   :class="activeTab === 'messages' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <div class="relative">
+                        <i data-lucide="send" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
+                        <span class="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white font-bold rounded-full w-4 h-4 flex items-center justify-center">3</span>
+                    </div>
+                    <span x-show="!sidebarCollapsed" class="text-sm">Messages</span>
+                </a>
+
+                <!-- Notifications (Triggers Drawer) -->
+                <button @click="toggleDrawer('notifications')" class="w-full flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group relative"
+                   :class="activeDrawer === 'notifications' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <div class="relative">
+                        <i data-lucide="heart" class="w-6 h-6 transition-transform group-hover:scale-110"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </div>
+                    <span x-show="!sidebarCollapsed" class="text-sm">Notifications</span>
+                </button>
+
+                <!-- Profile -->
+                <a href="#" @click.prevent="activeTab = 'profile'; closeAllDrawers()" class="flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group"
+                   :class="activeTab === 'profile' ? 'font-bold bg-neutral-100 dark:bg-neutral-900' : ''">
+                    <img :src="currentUser.avatar" alt="Avatar" class="w-6 h-6 rounded-full object-cover border border-neutral-300 dark:border-neutral-700">
+                    <span x-show="!sidebarCollapsed" class="text-sm">Profile</span>
+                </a>
+            </nav>
+
+            <!-- Theme & More Action Footer -->
+            <div class="mt-auto pt-6 space-y-2 border-t border-igLight-border dark:border-igDark-border">
+                <!-- Theme Toggle -->
+                <button @click="toggleDarkMode()" class="w-full flex items-center gap-4 p-3 rounded-xl transition hover:bg-neutral-100 dark:hover:bg-neutral-900 group text-left">
+                    <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-6 h-6 text-yellow-500 dark:text-purple-400"></i>
+                    <span x-show="!sidebarCollapsed" class="text-sm">
+                        <span x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
+                    </span>
+                </button>
+
+                <!-- Quick Help / Feedback -->
+                <div x-show="!sidebarCollapsed" class="p-3 text-[11px] text-igLight-textMuted dark:text-igDark-textMuted leading-normal">
+                    <p>&copy; 2026 InstaVibe Dashboard</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- SLIDEOUT DRAWER PANEL (For Desktop Search & Notifications) -->
+        <div x-show="activeDrawer" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 -translate-x-10"
+             x-transition:enter-end="opacity-100 translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-x-0"
+             x-transition:leave-end="opacity-0 -translate-x-10"
+             class="hidden md:block fixed top-0 h-screen bg-white dark:bg-black border-r border-igLight-border dark:border-igDark-border shadow-2xl z-30 w-80 p-6 transition-all duration-300"
+             :style="sidebarCollapsed ? 'left: 5rem;' : 'left: 16rem; xl:left: 18rem;'">
+            
+            <!-- Search Drawer Content -->
+            <div x-show="activeDrawer === 'search'" class="flex flex-col h-full">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold">Search</h3>
+                    <button @click="closeAllDrawers()" class="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-400 hover:text-black dark:hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="relative mb-6">
+                    <input type="text" placeholder="Search user or hashtag..." 
+                           class="w-full py-2.5 pl-10 pr-4 rounded-lg bg-neutral-100 dark:bg-neutral-900 border-none outline-none focus:ring-2 focus:ring-brand-pink text-sm dark:text-white"
+                           x-model="searchQuery" @input="filterSearch()">
+                    <i data-lucide="search" class="absolute left-3.5 top-3.5 w-4 h-4 text-neutral-400"></i>
+                </div>
+                <!-- Search Results -->
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                    <span class="text-xs font-semibold text-neutral-400">Results</span>
+                    <div class="space-y-3">
+                        <template x-for="user in searchResults" :key="user.id">
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <img :src="user.avatar" class="w-10 h-10 rounded-full object-cover">
+                                    <div>
+                                        <p class="text-sm font-semibold hover:underline cursor-pointer" x-text="user.username"
+                                           @click="activeTab = 'profile'; closeAllDrawers()"></p>
+                                        <p class="text-xs text-neutral-400" x-text="user.fullName"></p>
+                                    </div>
+                                </div>
+                                <button @click="activeTab = 'profile'; closeAllDrawers()" class="text-xs text-brand-pink font-semibold hover:text-purple-600">View</button>
+                            </div>
+                        </template>
+                        <template x-if="searchResults.length === 0">
+                            <p class="text-xs text-neutral-400 italic text-center py-4">No users found matching your search</p>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Drawer Content -->
+            <div x-show="activeDrawer === 'notifications'" class="flex flex-col h-full">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold">Notifications</h3>
+                    <button @click="closeAllDrawers()" class="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-400 hover:text-black dark:hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                    <!-- Dynamic simulated notifications -->
+                    <div class="space-y-4">
+                        <template x-for="notif in notifications" :key="notif.id">
+                            <div class="flex items-start gap-3 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-950 transition text-sm">
+                                <img :src="notif.avatar" class="w-9 h-9 rounded-full object-cover mt-0.5">
+                                <div class="flex-1">
+                                    <p class="leading-normal">
+                                        <span class="font-bold cursor-pointer hover:underline" x-text="notif.username" @click="activeTab = 'profile'; closeAllDrawers()"></span> 
+                                        <span x-text="notif.text"></span>
+                                        <span class="text-xs text-neutral-400 ml-1 block" x-text="notif.time"></span>
+                                    </p>
+                                </div>
+                                <div x-show="notif.postImg">
+                                    <img :src="notif.postImg" class="w-10 h-10 rounded object-cover cursor-pointer" @click="activeTab = 'home'; closeAllDrawers()">
+                                </div>
+                                <div x-show="!notif.postImg">
+                                    <button class="px-3 py-1 bg-brand-pink text-white text-xs font-semibold rounded-lg hover:bg-opacity-90">Follow</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOBILE NAVIGATION / TOP BAR -->
+        <header class="md:hidden fixed top-0 left-0 w-full h-14 bg-white dark:bg-black border-b border-igLight-border dark:border-igDark-border flex items-center justify-between px-4 z-40">
+            <a href="#" @click.prevent="activeTab = 'home'; closeAllDrawers()" class="text-xl font-bold font-serif tracking-wider bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+                InstaVibe
+            </a>
+            <div class="flex items-center gap-4">
+                <!-- Mobile create post button removed for index.html -->
+                <button @click="activeTab = 'messages'; closeAllDrawers()" class="relative text-neutral-800 dark:text-neutral-200 hover:text-brand-pink">
+                    <i data-lucide="send" class="w-6 h-6"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-[8px] text-white font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">3</span>
+                </button>
+                <button @click="toggleDarkMode()" class="text-yellow-500 hover:scale-105 transition">
+                    <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MOBILE BOTTOM BAR -->
+        <nav class="md:hidden fixed bottom-0 left-0 w-full h-12 bg-white dark:bg-black border-t border-igLight-border dark:border-igDark-border flex items-center justify-around z-40 pb-safe">
+            <button @click="activeTab = 'home'; closeAllDrawers()" class="p-2" :class="activeTab === 'home' ? 'text-black dark:text-white' : 'text-neutral-400'">
+                <i data-lucide="home" class="w-6 h-6"></i>
+            </button>
+            <button @click="activeTab = 'explore'; closeAllDrawers()" class="p-2" :class="activeTab === 'explore' ? 'text-black dark:text-white' : 'text-neutral-400'">
+                <i data-lucide="compass" class="w-6 h-6"></i>
+            </button>
+            <button @click="activeTab = 'profile'; closeAllDrawers()" class="p-2" :class="activeTab === 'profile' ? 'text-black dark:text-white' : 'text-neutral-400'">
+                <img :src="currentUser.avatar" alt="Avatar" class="w-6 h-6 rounded-full border border-neutral-300 dark:border-neutral-700">
+            </button>
+        </nav>
+
+        <!-- MAIN LAYOUT AREA -->
+        <main class="flex-1 md:pl-20 xl:pl-72 transition-all duration-300 pt-14 md:pt-0 pb-12 md:pb-0"
+              :style="sidebarCollapsed ? 'padding-left: 5rem;' : ''">
+            
+            <div class="max-w-[935px] mx-auto py-4 md:py-8 px-2 md:px-8">
+                
+                <!-- 1. HOME TAB -->
+                <div x-show="activeTab === 'home'" class="flex flex-col lg:flex-row justify-center gap-8">
+                    <!-- Feed Column -->
+                    <section class="flex-1 max-w-[600px] w-full space-y-6">
+                        
+                        <!-- STORIES CAROUSEL -->
+                        <div class="flex items-center gap-4 bg-white dark:bg-black border border-igLight-border dark:border-igDark-border rounded-xl p-4 overflow-x-auto no-scrollbar shadow-sm">
+                            <!-- Create Story Option -->
+                            <div class="flex flex-col items-center flex-shrink-0 cursor-pointer relative">
+                                <div class="relative group">
+                                    <img :src="currentUser.avatar" class="w-14 h-14 rounded-full object-cover border border-neutral-300 dark:border-neutral-700">
+                                    <div class="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-0.5 border-2 border-white dark:border-black">
+                                        <i data-lucide="plus" class="w-3 h-3"></i>
+                                    </div>
+                                </div>
+                                <span class="text-xs mt-1.5 font-medium max-w-[68px] truncate text-neutral-400">Your Story</span>
+                            </div>
+
+                            <!-- List of Stories -->
+                            <template x-for="(story, index) in stories" :key="story.id">
+                                <div @click="openStoryViewer(index)" class="flex flex-col items-center flex-shrink-0 cursor-pointer select-none">
+                                    <div class="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 transition duration-300 transform hover:scale-105"
+                                         :class="story.viewed ? 'opacity-40 bg-none border border-neutral-300 dark:border-neutral-800 p-0.5' : ''">
+                                        <img :src="story.avatar" :alt="story.username" class="rounded-full object-cover border-2 border-white dark:border-black w-13 h-13 md:w-14 md:h-14">
+                                    </div>
+                                    <span class="text-xs mt-1.5 font-medium max-w-[68px] truncate" x-text="story.username"></span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- MAIN POSTS FEED -->
+                        <div class="space-y-6">
+                            <template x-for="post in posts" :key="post.id">
+                                <article class="bg-white dark:bg-black border border-igLight-border dark:border-igDark-border rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+                                    <!-- Post Header -->
+                                    <div class="flex items-center justify-between p-3.5 border-b border-neutral-100 dark:border-neutral-900">
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+                                                <img :src="post.avatar" :alt="post.username" class="w-8 h-8 rounded-full border-2 border-white dark:border-black object-cover">
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="font-bold text-sm cursor-pointer hover:underline" x-text="post.username"></span>
+                                                    <i data-lucide="badge-check" class="w-4 h-4 text-blue-500 fill-current" x-show="post.verified"></i>
+                                                </div>
+                                                <span class="text-xs text-igLight-textMuted dark:text-igDark-textMuted" x-text="post.location"></span>
+                                            </div>
+                                        </div>
+                                        <button class="text-neutral-500 hover:text-black dark:hover:text-white">
+                                            <i data-lucide="more-horizontal" class="w-5 h-5"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Post Image / Media with double click gesture -->
+                                    <div class="relative aspect-square w-full select-none overflow-hidden bg-neutral-900 cursor-pointer"
+                                         @dblclick="handleDoubleLike(post)">
+                                        <img :src="post.image" :alt="post.username" class="w-full h-full object-cover">
+                                        
+                                        <!-- Animated overlay heart on double-tap -->
+                                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0"
+                                             :class="post.showBigHeart ? 'animate-heart-pulse' : ''">
+                                            <i data-lucide="heart" class="w-24 h-24 text-red-500 fill-current drop-shadow-lg"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- Post Controls / Interactive Bar -->
+                                    <div class="p-3.5">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="flex items-center gap-4">
+                                                <!-- Like Button -->
+                                                <button @click="toggleLike(post)" class="transition duration-150 transform active:scale-125">
+                                                    <i data-lucide="heart" class="w-6 h-6 hover:text-red-500" 
+                                                       :class="post.liked ? 'text-red-500 fill-current' : ''"></i>
+                                                </button>
+                                                <!-- Comment Button -->
+                                                <button @click="focusCommentInput(post.id)" class="hover:opacity-70">
+                                                    <i data-lucide="message-circle" class="w-6 h-6"></i>
+                                                </button>
+                                                <!-- Share Button -->
+                                                <button class="hover:opacity-70" @click="activeTab = 'messages'; selectChat(1)">
+                                                    <i data-lucide="send" class="w-6 h-6"></i>
+                                                </button>
+                                            </div>
+                                            <!-- Bookmark -->
+                                            <button @click="post.bookmarked = !post.bookmarked" class="transition duration-150 active:scale-125">
+                                                <i data-lucide="bookmark" class="w-6 h-6"
+                                                   :class="post.bookmarked ? 'text-black dark:text-white fill-current' : ''"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Likes Counter -->
+                                        <div class="mb-2">
+                                            <p class="font-bold text-sm">
+                                                <span x-text="post.likes.toLocaleString()"></span> likes
+                                            </p>
+                                        </div>
+
+                                        <!-- Caption -->
+                                        <div class="mb-3 text-sm">
+                                            <p class="leading-relaxed">
+                                                <span class="font-bold mr-2 cursor-pointer hover:underline" x-text="post.username"></span>
+                                                <span x-text="post.caption"></span>
+                                            </p>
+                                        </div>
+
+                                        <!-- Dynamic Comments Area -->
+                                        <div class="space-y-1 mb-4">
+                                            <!-- Toggle Expand Comments -->
+                                            <button @click="post.showAllComments = !post.showAllComments" 
+                                                    class="text-xs text-neutral-400 font-medium mb-2 block hover:underline"
+                                                    x-show="post.comments.length > 2">
+                                                <span x-text="post.showAllComments ? 'Hide comments' : 'View all ' + post.comments.length + ' comments'"></span>
+                                            </button>
+
+                                            <!-- Rendered Comments -->
+                                            <div class="space-y-1.5">
+                                                <template x-for="(cmt, idx) in post.comments" :key="idx">
+                                                    <div class="text-sm flex justify-between" 
+                                                         x-show="post.showAllComments || idx >= post.comments.length - 2">
+                                                        <p>
+                                                            <span class="font-bold mr-1.5 cursor-pointer hover:underline" x-text="cmt.user"></span>
+                                                            <span x-text="cmt.text"></span>
+                                                        </p>
+                                                        <button class="text-neutral-400 hover:text-red-500">
+                                                            <i data-lucide="heart" class="w-3 h-3"></i>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <p class="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold mb-3" x-text="post.timeAgo"></p>
+
+                                        <!-- Comment Input -->
+                                        <div class="border-t border-neutral-100 dark:border-neutral-900 pt-3 flex items-center justify-between">
+                                            <div class="flex items-center gap-3 flex-1 mr-4">
+                                                <button class="text-neutral-500 hover:text-black dark:hover:text-white">
+                                                    <i data-lucide="smile" class="w-5 h-5"></i>
+                                                </button>
+                                                <input type="text" placeholder="Add a comment..." 
+                                                       class="w-full bg-transparent border-none outline-none text-sm placeholder-neutral-400 focus:ring-0 dark:text-white"
+                                                       :id="'comment-input-' + post.id"
+                                                       x-model="post.newComment"
+                                                       @keyup.enter="addNewComment(post)">
+                                            </div>
+                                            <button @click="addNewComment(post)" 
+                                                    class="text-sm text-brand-pink font-semibold hover:text-purple-600 disabled:opacity-40 disabled:pointer-events-none"
+                                                    :disabled="!post.newComment || !post.newComment.trim()">
+                                                Post
+                                            </button>
+                                        </div>
+                                    </div>
+                                </article>
+                            </template>
+                        </div>
+                    </section>
+
+                    <!-- Suggestions Column (Desktop only) -->
+                    <aside class="hidden lg:block w-[320px] h-fit sticky top-8 space-y-6">
+                        <!-- Current User switcher -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4 cursor-pointer" @click="activeTab = 'profile'">
+                                <img :src="currentUser.avatar" class="w-14 h-14 rounded-full border border-neutral-300 dark:border-neutral-700 object-cover">
+                                <div>
+                                    <p class="font-bold text-sm" x-text="currentUser.username"></p>
+                                    <p class="text-sm text-neutral-400" x-text="currentUser.fullName"></p>
+                                </div>
+                            </div>
+                            <button class="text-xs text-blue-500 font-bold hover:text-blue-700">Switch</button>
+                        </div>
+
+                        <!-- Suggestions Header -->
+                        <div class="flex items-center justify-between text-sm font-semibold">
+                            <span class="text-neutral-400">Suggested for you</span>
+                            <button class="text-black dark:text-white hover:text-neutral-400">See All</button>
+                        </div>
+
+                        <!-- Suggestion list -->
+                        <div class="space-y-4">
+                            <template x-for="user in suggestions" :key="user.id">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="user.avatar" class="w-9 h-9 rounded-full object-cover">
+                                        <div>
+                                            <p class="font-bold text-sm cursor-pointer hover:underline" x-text="user.username" @click="activeTab = 'profile'"></p>
+                                            <p class="text-xs text-neutral-400" x-text="user.followedBy"></p>
+                                        </div>
+                                    </div>
+                                    <button @click="user.followed = !user.followed" 
+                                            class="text-xs font-bold transition"
+                                            :class="user.followed ? 'text-neutral-400' : 'text-blue-500 hover:text-blue-700'">
+                                        <span x-text="user.followed ? 'Following' : 'Follow'"></span>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Footer Info Panel -->
+                        <footer class="text-xs text-neutral-400 space-y-4">
+                            <div class="flex flex-wrap gap-x-2 gap-y-1">
+                                <a href="#" class="hover:underline">About</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Help</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Press</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">API</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Jobs</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Privacy</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Terms</a><span>&middot;</span>
+                                <a href="#" class="hover:underline">Locations</a>
+                            </div>
+                            <p class="font-semibold">&copy; 2026 INSTAVIBE DASHBOARD</p>
+                        </footer>
+                    </aside>
+                </div>
+
+                <!-- 2. EXPLORE TAB (Grid-based Media) -->
+                <div x-show="activeTab === 'explore'" class="space-y-6" x-transition>
+                    <h2 class="text-2xl font-bold tracking-tight mb-4">Explore</h2>
+                    <div class="grid grid-cols-3 gap-1 md:gap-4">
+                        <template x-for="item in exploreGrid" :key="item.id">
+                            <div class="relative aspect-square bg-neutral-800 rounded-lg overflow-hidden group cursor-pointer">
+                                <img :src="item.image" class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-6 text-white font-bold transition duration-200">
+                                    <div class="flex items-center gap-1.5">
+                                        <i data-lucide="heart" class="w-5 h-5 fill-current"></i>
+                                        <span x-text="item.likes"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <i data-lucide="message-circle" class="w-5 h-5 fill-current"></i>
+                                        <span x-text="item.comments"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 4. PROFILE TAB (User Profile Card & Grid) -->
+                <div x-show="activeTab === 'profile'" class="space-y-8" x-transition>
+                    <!-- Profile Header -->
+                    <div class="flex items-start md:items-center gap-6 md:gap-16 border-b border-igLight-border dark:border-igDark-border pb-10">
+                        <!-- Avatar with Gradient Ring -->
+                        <div class="p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex-shrink-0 cursor-pointer">
+                            <img :src="currentUser.avatar" class="w-20 h-20 md:w-36 md:h-36 rounded-full object-cover border-4 border-white dark:border-black">
+                        </div>
+                        
+                        <!-- Information Section -->
+                        <div class="flex-1 space-y-4">
+                            <div class="flex flex-col md:flex-row md:items-center gap-4">
+                                <h1 class="text-xl font-bold flex items-center gap-2">
+                                    <span x-text="currentUser.username"></span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider select-none bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"
+                                          x-text="currentUser.role"></span>
+                                </h1>
+                                <div class="flex items-center gap-2">
+                                    <button class="px-4 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-sm font-semibold rounded-lg transition">Edit profile</button>
+                                    <button class="px-4 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-sm font-semibold rounded-lg transition">Archive</button>
+                                    <button class="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Stats (Followers, posts etc) -->
+                            <div class="hidden md:flex gap-8 text-sm">
+                                <div><span class="font-bold" x-text="posts.length"></span> posts</div>
+                                <div><span class="font-bold" x-text="currentUser.followers"></span> followers</div>
+                                <div><span class="font-bold" x-text="currentUser.following"></span> following</div>
+                            </div>
+
+                            <!-- Bio -->
+                            <div class="space-y-1">
+                                <p class="font-semibold text-sm" x-text="currentUser.fullName"></p>
+                                <p class="text-sm" x-text="currentUser.bio"></p>
+                                <p class="text-sm font-semibold text-neutral-400">🔥 Living the absolute best life. Built with Tailwind & AlpineJS</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Content Navigation Tabs -->
+                    <div class="flex items-center justify-center gap-12 border-b border-neutral-100 dark:border-neutral-900 pb-2">
+                        <button class="flex items-center gap-2 pb-4 border-b-2 border-black dark:border-white font-bold text-xs uppercase tracking-wider">
+                            <i data-lucide="grid" class="w-4 h-4"></i> Posts
+                        </button>
+                        <button class="flex items-center gap-2 pb-4 text-neutral-400 text-xs uppercase tracking-wider hover:text-black dark:hover:text-white">
+                            <i data-lucide="bookmark" class="w-4 h-4"></i> Saved
+                        </button>
+                        <button class="flex items-center gap-2 pb-4 text-neutral-400 text-xs uppercase tracking-wider hover:text-black dark:hover:text-white">
+                            <i data-lucide="user-square" class="w-4 h-4"></i> Tagged
+                        </button>
+                    </div>
+
+                    <!-- Profile Post Grid -->
+                    <div class="grid grid-cols-3 gap-1 md:gap-4">
+                        <template x-for="post in posts" :key="post.id">
+                            <div class="relative aspect-square bg-neutral-800 rounded-lg overflow-hidden group cursor-pointer"
+                                 @click="activeTab = 'home'">
+                                <img :src="post.image" class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-6 text-white font-bold transition duration-200">
+                                    <div class="flex items-center gap-1.5">
+                                        <i data-lucide="heart" class="w-5 h-5 fill-current"></i>
+                                        <span x-text="post.likes"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <i data-lucide="message-circle" class="w-5 h-5 fill-current"></i>
+                                        <span x-text="post.comments.length"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- 5. MESSAGES TAB (Inbox) -->
+                <div x-show="activeTab === 'messages'" class="bg-white dark:bg-black border border-igLight-border dark:border-igDark-border rounded-xl shadow-sm h-[80vh] flex overflow-hidden" x-transition>
+                    <!-- Chat Listing (Left Panel) -->
+                    <div class="w-full md:w-80 border-r border-igLight-border dark:border-igDark-border flex flex-col"
+                         :class="activeChatId !== null ? 'hidden md:flex' : 'flex'">
+                        <!-- Header with Username -->
+                        <div class="p-5 border-b border-igLight-border dark:border-igDark-border flex items-center justify-between">
+                            <h2 class="font-bold text-lg flex items-center gap-2" x-text="currentUser.username"></h2>
+                            <button class="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-900 rounded-lg text-neutral-800 dark:text-neutral-200">
+                                <i data-lucide="square-edit-run" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Chat List -->
+                        <div class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1">
+                            <template x-for="chat in chats" :key="chat.id">
+                                <div @click="selectChat(chat.id)"
+                                     class="flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-950 transition"
+                                     :class="activeChatId === chat.id ? 'bg-neutral-50 dark:bg-neutral-900' : ''">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative">
+                                            <img :src="chat.avatar" class="w-12 h-12 rounded-full object-cover">
+                                            <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-black" x-show="chat.online"></div>
+                                        </div>
+                                        <div class="max-w-[150px]">
+                                            <p class="font-semibold text-sm truncate" x-text="chat.username"></p>
+                                            <p class="text-xs text-neutral-400 truncate mt-0.5" x-text="chat.lastMessage"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] text-neutral-400" x-text="chat.time"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Chat Body (Right Panel) -->
+                    <div class="flex-1 flex flex-col bg-white dark:bg-black"
+                         :class="activeChatId === null ? 'hidden md:flex items-center justify-center p-8' : 'flex'">
+                        
+                        <template x-if="activeChatId === null">
+                            <div class="text-center space-y-4">
+                                <div class="w-24 h-24 rounded-full border-2 border-black dark:border-white flex items-center justify-center mx-auto text-neutral-800 dark:text-neutral-100">
+                                    <i data-lucide="send" class="w-12 h-12 rotate-12"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">Your Messages</h3>
+                                <p class="text-sm text-neutral-400 max-w-[280px]">Send private photos and messages to a friend or group.</p>
+                                <button @click="selectChat(1)" class="px-5 py-2.5 bg-brand-pink hover:bg-opacity-95 text-white font-semibold rounded-lg text-sm transition">Send Message</button>
+                            </div>
+                        </template>
+
+                        <template x-if="activeChatId !== null">
+                            <div class="flex-1 flex flex-col h-full overflow-hidden">
+                                <!-- Chat Header -->
+                                <div class="p-4 border-b border-igLight-border dark:border-igDark-border flex items-center justify-between bg-white dark:bg-black">
+                                    <div class="flex items-center gap-3">
+                                        <!-- Mobile Back Button -->
+                                        <button @click="activeChatId = null" class="md:hidden p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-500">
+                                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                                        </button>
+                                        <div class="relative">
+                                            <img :src="chats.find(c => c.id === activeChatId)?.avatar" class="w-10 h-10 rounded-full object-cover">
+                                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-black" x-show="chats.find(c => c.id === activeChatId)?.online"></div>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-sm" x-text="chats.find(c => c.id === activeChatId)?.username"></p>
+                                            <p class="text-[10px] text-neutral-400" x-text="chats.find(c => c.id === activeChatId)?.online ? 'Active now' : 'Offline'"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-neutral-600 dark:text-neutral-400">
+                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="phone" class="w-5 h-5"></i></button>
+                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="video" class="w-5 h-5"></i></button>
+                                        <button class="hover:text-black dark:hover:text-white"><i data-lucide="info" class="w-5 h-5"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Messages List Container -->
+                                <div id="chat-scroll-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-neutral-50 dark:bg-neutral-950/20">
+                                    <template x-for="msg in chats.find(c => c.id === activeChatId)?.messages">
+                                        <div class="flex flex-col" :class="msg.sender === 'me' ? 'items-end' : 'items-start'">
+                                            <div class="max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm"
+                                                 :class="msg.sender === 'me' ? 'bg-brand-pink text-white rounded-br-none' : 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white rounded-bl-none'">
+                                                <p x-text="msg.text"></p>
+                                            </div>
+                                            <span class="text-[9px] text-neutral-400 mt-1 px-1" x-text="msg.time"></span>
+                                        </div>
+                                    </template>
+                                    
+                                    <!-- Typing Indicator -->
+                                    <div class="flex items-center gap-2" x-show="isTyping" x-transition>
+                                        <div class="bg-neutral-200 dark:bg-neutral-800 rounded-full px-4 py-2 text-xs flex gap-1 items-center">
+                                            <span class="animate-bounce" style="animation-delay: 0.1s">•</span>
+                                            <span class="animate-bounce" style="animation-delay: 0.2s">•</span>
+                                            <span class="animate-bounce" style="animation-delay: 0.3s">•</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Input Box -->
+                                <div class="p-4 border-t border-igLight-border dark:border-igDark-border bg-white dark:bg-black">
+                                    <div class="flex items-center gap-3 border border-neutral-300 dark:border-neutral-800 rounded-full px-4 py-2">
+                                        <button class="text-neutral-500 hover:text-black dark:hover:text-white">
+                                            <i data-lucide="smile" class="w-5 h-5"></i>
+                                        </button>
+                                        <input type="text" placeholder="Message..." 
+                                               class="flex-1 bg-transparent border-none outline-none text-sm placeholder-neutral-400 focus:ring-0 dark:text-white"
+                                               x-model="newMessageText"
+                                               @keyup.enter="sendMessage()">
+                                        <button @click="sendMessage()" 
+                                                class="text-sm text-brand-pink font-semibold hover:text-purple-600"
+                                                x-show="newMessageText.trim().length > 0">
+                                            Send
+                                        </button>
+                                        <div class="flex items-center gap-3 text-neutral-500" x-show="newMessageText.trim().length === 0">
+                                            <button class="hover:text-black dark:hover:text-white"><i data-lucide="image" class="w-5 h-5"></i></button>
+                                            <button class="hover:text-black dark:hover:text-white"><i data-lucide="heart" class="w-5 h-5"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- INTERACTIVE STORY VIEWER MODAL -->
+    <div x-show="showStoryViewer" 
+         class="fixed inset-0 bg-neutral-950/98 z-50 flex flex-col items-center justify-center p-4"
+         x-transition
+         @keydown.escape.window="closeStoryViewer()">
+        
+        <!-- Story View Container -->
+        <div class="relative w-full max-w-[420px] aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl flex flex-col justify-between p-4"
+             @mousedown="clearInterval(storyInterval)"
+             @mouseup="startStoryProgress()"
+             @touchstart="clearInterval(storyInterval)"
+             @touchend="startStoryProgress()">
+            
+            <!-- Progress Bars -->
+            <div class="absolute top-2 left-0 right-0 px-2 flex gap-1.5 z-30">
+                <template x-for="(story, idx) in stories" :key="story.id">
+                    <div class="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
+                        <div class="h-full bg-white transition-all ease-linear"
+                             :style="idx === currentStoryIndex ? 'width: ' + storyProgress + '%;' : (idx < currentStoryIndex ? 'width: 100%;' : 'width: 0%;')"
+                             :class="idx === currentStoryIndex ? 'duration-100' : ''"></div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Top Header info -->
+            <div class="flex items-center justify-between mt-2 relative z-30 text-white">
+                <div class="flex items-center gap-2.5">
+                    <img :src="stories[currentStoryIndex]?.avatar" class="w-8 h-8 rounded-full border border-white/40 object-cover">
+                    <span class="font-bold text-sm" x-text="stories[currentStoryIndex]?.username"></span>
+                    <span class="text-xs text-neutral-300">4h ago</span>
+                </div>
+                <button @click="closeStoryViewer()" class="p-1.5 rounded-full bg-black/25 text-white hover:bg-black/40 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Main Dynamic Image -->
+            <img :src="stories[currentStoryIndex]?.storyImg" class="absolute inset-0 w-full h-full object-cover">
+
+            <!-- Next / Prev Click Zones -->
+            <div class="absolute inset-0 flex z-10">
+                <div @click="prevStory()" class="w-1/3 h-full cursor-w-resize"></div>
+                <div @click="nextStory()" class="w-2/3 h-full cursor-e-resize"></div>
+            </div>
+            
+            <!-- Bottom Send reply in Story -->
+            <div class="relative z-30 flex items-center justify-between gap-3 text-white">
+                <input type="text" placeholder="Send reply..." 
+                       class="flex-1 bg-transparent border border-white/50 rounded-full px-4 py-2 text-sm placeholder-white/80 focus:outline-none focus:border-white focus:ring-0">
+                <button @click="closeStoryViewer()" class="p-2 hover:opacity-75">
+                    <i data-lucide="send" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ALPINE & CORE DASHBOARD SCRIPT -->
+    <script>
+        function appState() {
+            return {
+                darkMode: localStorage.getItem('darkMode') === 'true',
+                sidebarCollapsed: false,
+                activeTab: 'home',
+                activeDrawer: null,
+                searchQuery: '',
+                searchResults: [],
+                notifications: [],
+                
+                currentUser: {
+                    username: 'karthik_codes',
+                    fullName: 'Karthik Kumar',
+                    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                    bio: 'Crafting premium web experiences • AI Engineer 🚀 • building antigravity widgets.',
+                    followers: '12.8K',
+                    following: '482',
+                    role: 'user',
+                },
+                
+                stories: [
+                    { id: 1, username: 'travel_bug', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', storyImg: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80', viewed: false },
+                    { id: 2, username: 'foodie_explorer', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', storyImg: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80', viewed: false },
+                    { id: 3, username: 'design_inspire', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80', storyImg: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', viewed: false },
+                    { id: 4, username: 'fitness_beast', avatar: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80', storyImg: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop&q=80', viewed: false },
+                    { id: 5, username: 'tech_guru', avatar: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=150&auto=format&fit=crop&q=80', storyImg: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop&q=80', viewed: false }
+                ],
+                
+                posts: [
+                    {
+                        id: 1,
+                        username: 'travel_bug',
+                        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+                        verified: true,
+                        location: 'Santorini, Greece',
+                        image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&auto=format&fit=crop&q=80',
+                        liked: false,
+                        bookmarked: false,
+                        likes: 12450,
+                        caption: 'Chasing sunsets in the beautiful cliffs of Santorini. Truly a magical experience! 🌅🇬🇷 #travel #greece #wanderlust',
+                        comments: [
+                            { user: 'globetrotter', text: 'Stunning view! Adding this to my bucket list.' },
+                            { user: 'explorer_girl', text: 'What lens did you use for this?' }
+                        ],
+                        newComment: '',
+                        showAllComments: false,
+                        showBigHeart: false,
+                        timeAgo: '2 hours ago'
+                    },
+                    {
+                        id: 2,
+                        username: 'design_inspire',
+                        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
+                        verified: false,
+                        location: 'Design Studio',
+                        image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
+                        liked: true,
+                        bookmarked: true,
+                        likes: 4210,
+                        caption: 'Exploring abstract glassmorphic textures today. Thoughts on this color palette? 🎨💎 #uxdesign #web3 #glassmorphism',
+                        comments: [
+                            { user: 'pixel_perfect', text: 'This looks so clean, love the depth!' },
+                            { user: 'karthik_codes', text: 'Absolutely stellar, the purple gradient is perfect.' }
+                        ],
+                        newComment: '',
+                        showAllComments: false,
+                        showBigHeart: false,
+                        timeAgo: '5 hours ago'
+                    }
+                ],
+                
+                suggestions: [
+                    { id: 1, username: 'creative_mind', fullName: 'Sarah Jenkins', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80', followedBy: 'Followed by travel_bug + 3 others', followed: false },
+                    { id: 2, username: 'photogeek', fullName: 'Dan Oliver', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80', followedBy: 'Followed by tech_guru', followed: false },
+                    { id: 3, username: 'cozy_space', fullName: 'Anna Bell', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&auto=format&fit=crop&q=80', followedBy: 'New to Instagram', followed: false }
+                ],
+
+                exploreGrid: [
+                    { id: 1, image: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=500&auto=format&fit=crop&q=80', likes: '1.2K', comments: 84 },
+                    { id: 2, image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500&auto=format&fit=crop&q=80', likes: '45K', comments: 392 },
+                    { id: 3, image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=500&auto=format&fit=crop&q=80', likes: '8.9K', comments: 148 },
+                    { id: 4, image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop&q=80', likes: '22K', comments: 403 },
+                    { id: 5, image: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=500&auto=format&fit=crop&q=80', likes: '16.7K', comments: 204 },
+                    { id: 6, image: 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=500&auto=format&fit=crop&q=80', likes: '3.4K', comments: 76 },
+                    { id: 7, image: 'https://images.unsplash.com/photo-1472214222541-d510753a4907?w=500&auto=format&fit=crop&q=80', likes: '11K', comments: 124 },
+                    { id: 8, image: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=500&auto=format&fit=crop&q=80', likes: '94K', comments: 1982 },
+                    { id: 9, image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=500&auto=format&fit=crop&q=80', likes: '5.2K', comments: 92 }
+                ],
+
+                activeChatId: null,
+                chats: [
+                    { id: 1, username: 'travel_bug', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', online: true, lastMessage: 'No messages yet', time: '10m', messages: [] },
+                    { id: 2, username: 'tech_guru', avatar: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=150&auto=format&fit=crop&q=80', online: false, lastMessage: 'No messages yet', time: '1h', messages: [] },
+                    { id: 3, username: 'design_inspire', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80', online: true, lastMessage: 'No messages yet', time: '3h', messages: [] }
+                ],
+                newMessageText: '',
+                isTyping: false,
+                chatPollInterval: null,
+
+                showStoryViewer: false,
+                currentStoryIndex: 0,
+                storyProgress: 0,
+                storyInterval: null,
+
+                init() {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                    this.$watch('darkMode', val => {
+                        localStorage.setItem('darkMode', val);
+                        if (val) {
+                            document.documentElement.classList.add('dark');
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                        }
+                    });
+
+                    // Fetch user and posts
+                    this.fetchUserProfile();
+                    this.fetchPosts();
+
+                    this.notifications = [
+                        { id: 1, username: 'foodie_explorer', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', text: 'liked your post.', time: '4m', postImg: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80' },
+                        { id: 2, username: 'fitness_beast', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80', text: 'started following you.', time: '1h', postImg: null }
+                    ];
+                    this.filterSearch();
+                    
+                    // Trigger Lucide icons replacing after Alpine binds elements
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                    
+                    // Re-run lucide icons creation whenever tabs or views change
+                    this.$watch('activeTab', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    this.$watch('activeDrawer', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                    this.$watch('activeChatId', () => {
+                        this.$nextTick(() => lucide.createIcons());
+                    });
+                },
+
+                getAuthHeader() {
+                    return { 'Authorization': 'Bearer ' + localStorage.getItem('token') };
+                },
+
+                fetchUserProfile() {
+                    fetch('/api/auth/me', { headers: this.getAuthHeader() })
+                    .then(res => {
+                        if (res.status === 401 || res.status === 403) {
+                            localStorage.removeItem('token');
+                            window.location.href = 'index.html';
+                            throw new Error('Unauthorized');
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.currentUser = data;
+                    })
+                    .catch(err => console.error('Error fetching user profile:', err));
+                },
+
+                fetchPosts() {
+                    fetch('/api/posts')
+                    .then(res => res.json())
+                    .then(data => {
+                        this.posts = data.map(post => {
+                            post.liked = post.likes.includes(this.currentUser.username || JSON.parse(localStorage.getItem('currentUser'))?.username);
+                            post.newComment = '';
+                            post.showAllComments = false;
+                            post.showBigHeart = false;
+                            
+                            // Format timeAgo
+                            const createdDate = new Date(post.createdAt);
+                            const diffMs = new Date() - createdDate;
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMins / 60);
+                            
+                            if (diffMins < 1) post.timeAgo = 'Just now';
+                            else if (diffMins < 60) post.timeAgo = `${diffMins}m ago`;
+                            else if (diffHours < 24) post.timeAgo = `${diffHours}h ago`;
+                            else post.timeAgo = createdDate.toLocaleDateString();
+
+                            return post;
+                        });
+                    })
+                    .catch(err => console.error('Error fetching posts:', err));
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                },
+
+                toggleDrawer(drawer) {
+                    if (this.activeDrawer === drawer) {
+                        this.activeDrawer = null;
+                        this.sidebarCollapsed = false;
+                    } else {
+                        this.activeDrawer = drawer;
+                        this.sidebarCollapsed = true;
+                    }
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                closeAllDrawers() {
+                    this.activeDrawer = null;
+                    this.sidebarCollapsed = false;
+                },
+
+                filterSearch() {
+                    const allUsers = [
+                        { id: 1, username: 'travel_bug', fullName: 'Jessica Davis', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
+                        { id: 2, username: 'foodie_explorer', fullName: 'Marco Rossi', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+                        { id: 3, username: 'design_inspire', fullName: 'Elena Smith', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80' },
+                        { id: 4, username: 'fitness_beast', fullName: 'Alex Mercer', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
+                        { id: 5, username: 'tech_guru', fullName: 'Alan Turing', avatar: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=150&auto=format&fit=crop&q=80' }
+                    ];
+                    if (!this.searchQuery.trim()) {
+                        this.searchResults = allUsers;
+                    } else {
+                        const query = this.searchQuery.toLowerCase();
+                        this.searchResults = allUsers.filter(u => 
+                            u.username.toLowerCase().includes(query) || 
+                            u.fullName.toLowerCase().includes(query)
+                        );
+                    }
+                },
+
+                toggleLike(post) {
+                    fetch(`/api/posts/${post._id}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...this.getAuthHeader()
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        post.likes = data.likes;
+                        post.liked = post.likes.includes(this.currentUser.username);
+                    })
+                    .catch(err => console.error('Error toggling like:', err));
+                },
+
+                handleDoubleLike(post) {
+                    if (!post.liked) {
+                        this.toggleLike(post);
+                    }
+                    post.showBigHeart = true;
+                    setTimeout(() => {
+                        post.showBigHeart = false;
+                    }, 800);
+                },
+
+                addNewComment(post) {
+                    if (!post.newComment || !post.newComment.trim()) return;
+                    
+                    fetch(`/api/posts/${post._id}/comment`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...this.getAuthHeader()
+                        },
+                        body: JSON.stringify({ text: post.newComment })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        post.comments = data;
+                        post.newComment = '';
+                        this.$nextTick(() => lucide.createIcons());
+                    })
+                    .catch(err => console.error('Error adding comment:', err));
+                },
+
+                focusCommentInput(postId) {
+                    const input = document.getElementById('comment-input-' + postId);
+                    if (input) input.focus();
+                },
+
+                // Story Viewer
+                openStoryViewer(index) {
+                    this.currentStoryIndex = index;
+                    this.showStoryViewer = true;
+                    this.storyProgress = 0;
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                        this.startStoryProgress();
+                    });
+                },
+
+                closeStoryViewer() {
+                    this.showStoryViewer = false;
+                    clearInterval(this.storyInterval);
+                },
+
+                startStoryProgress() {
+                    clearInterval(this.storyInterval);
+                    const duration = 4000; // 4s
+                    const step = 40; // 40ms interval
+                    const increment = (step / duration) * 100;
+                    
+                    this.storyInterval = setInterval(() => {
+                        if (this.storyProgress < 100) {
+                            this.storyProgress += increment;
+                        } else {
+                            this.nextStory();
+                        }
+                    }, step);
+                },
+
+                nextStory() {
+                    this.stories[this.currentStoryIndex].viewed = true;
+                    if (this.currentStoryIndex < this.stories.length - 1) {
+                        this.currentStoryIndex++;
+                        this.storyProgress = 0;
+                        this.startStoryProgress();
+                    } else {
+                        this.closeStoryViewer();
+                    }
+                },
+
+                prevStory() {
+                    if (this.currentStoryIndex > 0) {
+                        this.currentStoryIndex--;
+                        this.storyProgress = 0;
+                        this.startStoryProgress();
+                    } else {
+                        this.storyProgress = 0;
+                    }
+                },
+
+                // Message Inbox system
+                selectChat(chatId) {
+                    this.activeChatId = chatId;
+                    this.fetchChatMessages();
+                    
+                    // Poll chat messages every 3s
+                    if (this.chatPollInterval) clearInterval(this.chatPollInterval);
+                    this.chatPollInterval = setInterval(() => {
+                        if (this.activeChatId) this.fetchChatMessages();
+                    }, 3000);
+
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                },
+
+                fetchChatMessages() {
+                    const chat = this.chats.find(c => c.id === this.activeChatId);
+                    if (!chat) return;
+
+                    fetch(`/api/chats/${chat.username}`, { headers: this.getAuthHeader() })
+                    .then(res => res.json())
+                    .then(data => {
+                        chat.messages = data.map(msg => ({
+                            sender: msg.senderUsername === this.currentUser.username ? 'me' : 'them',
+                            text: msg.text,
+                            time: msg.time
+                        }));
+                        if (data.length > 0) {
+                            chat.lastMessage = data[data.length - 1].text;
+                            chat.time = data[data.length - 1].time;
+                        }
+                        this.scrollToBottom();
+                    })
+                    .catch(err => console.error('Error fetching messages:', err));
+                },
+
+                sendMessage() {
+                    if (!this.newMessageText.trim() || !this.activeChatId) return;
+                    const chat = this.chats.find(c => c.id === this.activeChatId);
+                    if (!chat) return;
+
+                    const text = this.newMessageText.trim();
+                    this.newMessageText = '';
+
+                    fetch('/api/chats/message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...this.getAuthHeader()
+                        },
+                        body: JSON.stringify({
+                            receiverUsername: chat.username,
+                            text: text
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(msg => {
+                        this.fetchChatMessages();
+                        
+                        // Show fake typing bubble for 1.5 seconds when bot replies
+                        this.isTyping = true;
+                        setTimeout(() => {
+                            this.isTyping = false;
+                            this.fetchChatMessages();
+                        }, 2000);
+                    })
+                    .catch(err => console.error('Error sending message:', err));
+                },
+
+                scrollToBottom() {
+                    setTimeout(() => {
+                        const container = document.getElementById('chat-scroll-container');
+                        if (container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }, 50);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

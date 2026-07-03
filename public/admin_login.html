@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaVibe - Admin Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#2563EB',
+                            indigo: '#4F46E5',
+                            violet: '#7C3AED',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- AlpineJS -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-neutral-950 text-neutral-100 font-sans min-h-screen flex flex-col justify-between transition-colors duration-300"
+      x-data="adminLoginState()" x-init="init()">
+
+    <!-- Top Theme Toggle Button -->
+    <div class="absolute top-4 right-4 z-50">
+        <button @click="toggleDarkMode()" class="p-2.5 rounded-full bg-neutral-900 border border-neutral-800 hover:scale-105 transition shadow-sm">
+            <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-5 h-5 text-yellow-500"></i>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-neutral-900/50 backdrop-blur-md border border-neutral-800 p-8 rounded-2xl shadow-2xl space-y-8 relative overflow-hidden">
+            
+            <!-- Royal Indigo Mesh Background Glows -->
+            <div class="absolute -top-16 -left-16 w-32 h-32 bg-gradient-to-tr from-brand-blue to-brand-indigo opacity-20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-gradient-to-tr from-brand-violet to-brand-indigo opacity-25 rounded-full blur-2xl pointer-events-none"></div>
+
+            <!-- Header logo -->
+            <div class="text-center relative z-10">
+                <div class="inline-flex p-3 bg-neutral-800/40 rounded-xl border border-neutral-700/50 mb-4">
+                    <i data-lucide="shield-check" class="w-8 h-8 text-brand-indigo"></i>
+                </div>
+                <h1 class="text-3xl font-bold tracking-wide bg-gradient-to-tr from-blue-400 via-indigo-400 to-violet-400 bg-clip-text text-transparent mb-1">
+                    InstaVibe Admin
+                </h1>
+                <p class="text-xs text-neutral-400">System Management & Posting Operations Portal</p>
+            </div>
+
+            <!-- Login form -->
+            <form @submit.prevent="handleLogin()" class="space-y-5 relative z-10">
+                <!-- Error Alert Box -->
+                <div x-show="errorMessage" x-transition class="p-3 bg-red-950/40 border border-red-900/50 rounded-lg text-xs text-red-400 flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                    <span x-text="errorMessage"></span>
+                </div>
+
+                <!-- Username/Email input -->
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-neutral-400 uppercase tracking-wider">Admin Identifier</label>
+                    <div class="relative">
+                        <input type="text" x-model="identifier" placeholder="e.g. karthik_codes or admin@domain.com" required
+                               class="w-full py-3 pl-10 pr-4 rounded-xl border border-neutral-800 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-brand-indigo focus:border-transparent text-white transition">
+                        <i data-lucide="user" class="absolute left-3.5 top-3.5 w-4 h-4 text-neutral-400"></i>
+                    </div>
+                </div>
+
+                <!-- Password input -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold text-neutral-400 uppercase tracking-wider">Secret Password</label>
+                    </div>
+                    <div class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" x-model="password" placeholder="••••••••" required
+                               class="w-full py-3 pl-10 pr-12 rounded-xl border border-neutral-800 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-brand-indigo focus:border-transparent text-white transition">
+                        <i data-lucide="lock" class="absolute left-3.5 top-3.5 w-4 h-4 text-neutral-400"></i>
+                        
+                        <!-- Toggle Password visibility icon -->
+                        <button type="button" @click="showPassword = !showPassword" 
+                                class="absolute right-3.5 top-3 text-neutral-400 hover:text-white transition">
+                            <i :data-lucide="showPassword ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:opacity-95 text-white font-semibold rounded-xl text-sm transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        :disabled="isLoading">
+                    <span x-show="!isLoading" class="flex items-center justify-center gap-1.5">
+                        Access Portal <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </span>
+                    <span x-show="isLoading" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Verifying...
+                    </span>
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- Minimal footer -->
+    <footer class="py-6 text-center text-xs text-neutral-500 tracking-wide border-t border-neutral-900/60">
+        &copy; 2026 INSTAVIBE PLATFORM • SECURE ADMINISTRATIVE OPERATIONS
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        function adminLoginState() {
+            return {
+                darkMode: true,
+                role: 'admin',
+                identifier: '',
+                password: '',
+                showPassword: false,
+                errorMessage: '',
+                isLoading: false,
+
+                init() {
+                    document.documentElement.classList.add('dark');
+                    this.$nextTick(() => {
+                        lucide.createIcons();
+                    });
+                    this.$watch('showPassword', () => this.$nextTick(() => lucide.createIcons()));
+                },
+
+                toggleDarkMode() {
+                    alert('Admin Console is optimized for Dark Mode.');
+                },
+
+                handleLogin() {
+                    this.errorMessage = '';
+                    
+                    if (!this.identifier.trim() || !this.password.trim()) {
+                        this.errorMessage = 'Please fill out all fields.';
+                        return;
+                    }
+
+                    this.isLoading = true;
+
+                    fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            identifier: this.identifier,
+                            password: this.password
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        this.isLoading = false;
+                        if (data.error) {
+                            this.errorMessage = data.error;
+                        } else {
+                            if (data.user.role !== this.role) {
+                                this.errorMessage = `Access Denied. This account is registered as a ${data.user.role}, not an admin.`;
+                                return;
+                            }
+                            
+                            localStorage.setItem('token', data.token);
+                            localStorage.setItem('currentUser', JSON.stringify(data.user));
+                            
+                            window.location.href = 'admin.html';
+                        }
+                    })
+                    .catch(err => {
+                        this.isLoading = false;
+                        this.errorMessage = 'A network error occurred. Please try again.';
+                        console.error('Admin Login error:', err);
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
