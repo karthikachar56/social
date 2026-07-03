@@ -414,70 +414,11 @@ async function seedDatabase() {
       console.log('Updated existing user to Admin User: achark659@gmail.com');
     }
 
-    // 2. Seed Mock Accounts for Chats
-    const mockUsernames = ['travel_bug', 'tech_guru', 'design_inspire'];
-    for (const u of mockUsernames) {
-      const exists = await User.findOne({ username: u });
-      if (!exists) {
-        const fakePass = await bcrypt.hash('password123', 10);
-        const nameMap = {
-          'travel_bug': 'Jessica Davis',
-          'tech_guru': 'Alan Turing',
-          'design_inspire': 'Elena Smith'
-        };
-        const avatarMap = {
-          'travel_bug': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-          'tech_guru': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=150&auto=format&fit=crop&q=80',
-          'design_inspire': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80'
-        };
-        const newUser = new User({
-          username: u,
-          name: nameMap[u],
-          email: `${u}@domain.com`,
-          phoneNumber: '+15550000',
-          password: fakePass,
-          avatar: avatarMap[u],
-          bio: 'Simulated creator account.',
-          role: 'user'
-        });
-        await newUser.save();
-      }
-    }
-
-    // 3. Seed Posts
-    const postCount = await Post.countDocuments();
-    if (postCount === 0) {
-      const samplePosts = [
-        {
-          username: 'travel_bug',
-          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-          verified: true,
-          location: 'Santorini, Greece',
-          image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&auto=format&fit=crop&q=80',
-          likes: ['design_inspire', 'karthik_codes'],
-          caption: 'Chasing sunsets in the beautiful cliffs of Santorini. Truly a magical experience! 🌅🇬🇷 #travel #greece #wanderlust',
-          comments: [
-            { user: 'globetrotter', text: 'Stunning view! Adding this to my bucket list.' },
-            { user: 'explorer_girl', text: 'What lens did you use for this?' }
-          ]
-        },
-        {
-          username: 'design_inspire',
-          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-          verified: false,
-          location: 'Design Studio',
-          image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-          likes: ['travel_bug'],
-          caption: 'Exploring abstract glassmorphic textures today. Thoughts on this color palette? 🎨💎 #uxdesign #web3 #glassmorphism',
-          comments: [
-            { user: 'pixel_perfect', text: 'This looks so clean, love the depth!' },
-            { user: 'karthik_codes', text: 'Absolutely stellar, the purple gradient is perfect.' }
-          ]
-        }
-      ];
-      await Post.insertMany(samplePosts);
-      console.log('Seeded default posts collections.');
-    }
+    // 2. Cleanup all non-admin users and mock data as requested
+    const userDeleteResult = await User.deleteMany({ role: { $ne: 'admin' } });
+    const postDeleteResult = await Post.deleteMany({});
+    const messageDeleteResult = await Message.deleteMany({});
+    console.log(`Database cleanup completed: deleted ${userDeleteResult.deletedCount} non-admin users, ${postDeleteResult.deletedCount} posts, and ${messageDeleteResult.deletedCount} message logs.`);
   } catch (err) {
     console.error('Error seeding database:', err);
   }
