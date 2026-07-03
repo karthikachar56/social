@@ -562,6 +562,22 @@
                         </div>
                     </div>
 
+                    <!-- Stats bar for Mobile -->
+                    <div class="flex md:hidden justify-around border-b border-t border-neutral-100 dark:border-neutral-900 py-3 text-center text-xs">
+                        <div>
+                            <div class="font-bold text-neutral-800 dark:text-neutral-100" x-text="posts.length"></div>
+                            <div class="text-neutral-400">posts</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-neutral-800 dark:text-neutral-100" x-text="currentUser.followers"></div>
+                            <div class="text-neutral-400">followers</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-neutral-800 dark:text-neutral-100" x-text="currentUser.following"></div>
+                            <div class="text-neutral-400">following</div>
+                        </div>
+                    </div>
+
                     <!-- Profile Content Navigation Tabs -->
                     <div class="flex items-center justify-center gap-12 border-b border-neutral-100 dark:border-neutral-900 pb-2">
                         <button class="flex items-center gap-2 pb-4 border-b-2 border-black dark:border-white font-bold text-xs uppercase tracking-wider">
