@@ -5,428 +5,275 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'instavibe_fallback_secret_key';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/instavibe';
+const JWT_SECRET = process.env.JWT_SECRET || 'eventhub_secret_key_2024';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventhub';
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Connect to MongoDB
+// Ensure uploads folder exists
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// Multer config
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2) + ext);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
+
 mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB successfully');
-    seedDatabase();
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-  });
+  .then(() => { console.log('Connected to MongoDB'); seedAdmins(); })
+  .catch(err => console.error('MongoDB error:', err));
 
-// --- MODELS ---
+// --- SCHEMAS ---
 
-// User Schema
-const UserSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  phoneNumber: { type: String, required: true },
-  password: { type: String, required: true },
-  avatar: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
-  bio: { type: String, default: 'Living the absolute best life. Built with Tailwind, AlpineJS & Express!' },
-  followers: { type: String, default: '0' },
-  following: { type: String, default: '0' },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' }
-});
-
-const User = mongoose.model('User', UserSchema);
-
-// Post Schema
-const PostSchema = new mongoose.Schema({
-  username: { type: String, required: true },
-  avatar: { type: String, default: '' },
-  verified: { type: Boolean, default: false },
-  location: { type: String, default: '' },
-  image: { type: String, required: true },
-  likes: [{ type: String }], // Array of usernames who liked it
-  caption: { type: String, default: '' },
-  comments: [{
-    user: { type: String, required: true },
-    text: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
-  }],
+const AdminSchema = new mongoose.Schema({
+  name:      { type: String, required: true },
+  email:     { type: String, required: true, unique: true },
+  password:  { type: String, required: true },
+  avatar:    { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
+const Admin = mongoose.model('Admin', AdminSchema);
 
-const Post = mongoose.model('Post', PostSchema);
+const EventSchema = new mongoose.Schema({
+  title:       { type: String, required: true },
+  description: { type: String, required: true },
+  date:        { type: String, required: true },
+  time:        { type: String, default: '' },
+  location:    { type: String, default: '' },
+  category:    { type: String, default: 'General' },
+  image:       { type: String, default: '' },
+  tags:        [String],
+  likes:       { type: Number, default: 0 },
+  adminName:   { type: String, required: true },
+  adminId:     { type: String, required: true },
+  createdAt:   { type: Date, default: Date.now }
+});
+const Event = mongoose.model('Event', EventSchema);
 
-// Message Schema
-const MessageSchema = new mongoose.Schema({
-  senderUsername: { type: String, required: true },
-  receiverUsername: { type: String, required: true },
-  text: { type: String, required: true },
-  time: { type: String, required: true },
+const NewsSchema = new mongoose.Schema({
+  title:     { type: String, required: true },
+  content:   { type: String, required: true },
+  summary:   { type: String, default: '' },
+  category:  { type: String, default: 'General' },
+  image:     { type: String, default: '' },
+  tags:      [String],
+  likes:     { type: Number, default: 0 },
+  adminName: { type: String, required: true },
+  adminId:   { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
-
-const Message = mongoose.model('Message', MessageSchema);
+const News = mongoose.model('News', NewsSchema);
 
 // --- AUTH MIDDLEWARE ---
-const authenticateJWT = async (req, res, next) => {
+const authAdmin = (req, res, next) => {
+  const h = req.headers.authorization;
+  if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
   try {
-    const admin = await User.findOne({ role: 'admin' });
-    req.user = { 
-      id: admin ? admin._id : 'temp-id', 
-      username: admin ? admin.username : 'achark659', 
-      role: 'admin' 
-    };
-  } catch (e) {
-    req.user = { id: 'temp-id', username: 'achark659', role: 'admin' };
+    req.admin = jwt.verify(h.split(' ')[1], JWT_SECRET);
+    next();
+  } catch {
+    res.status(403).json({ error: 'Invalid or expired token' });
   }
-  next();
 };
 
-// --- AUTH ENDPOINTS ---
-
-// Register
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { name, email, phoneNumber, password } = req.body;
-
-    if (!name || !email || !phoneNumber || !password) {
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-
-    // Check duplicate email
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email is already registered.' });
-    }
-
-    // Derive username from email prefix
-    let baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-    let username = baseUsername;
-    let suffix = 1;
-    while (await User.findOne({ username })) {
-      username = `${baseUsername}_${suffix}`;
-      suffix++;
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const newUser = new User({
-      username,
-      name,
-      email: email.toLowerCase(),
-      phoneNumber,
-      password: hashedPassword,
-      role: 'user' // Locked to user registration on signup
-    });
-
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully!', username });
-
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: 'Internal server error during registration.' });
-  }
+// --- FILE UPLOAD ---
+app.post('/api/upload', authAdmin, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image file provided or invalid type.' });
+  const url = '/uploads/' + req.file.filename;
+  res.json({ url });
 });
 
-// Login
-app.post('/api/auth/login', async (req, res) => {
+// --- ADMIN AUTH ---
+app.post('/api/admin/login', async (req, res) => {
   try {
-    const { identifier, password } = req.body;
-
-    if (!identifier || !password) {
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-
-    // Find by email or username
-    const user = await User.findOne({
-      $or: [
-        { email: identifier.toLowerCase() },
-        { username: identifier.toLowerCase() }
-      ]
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid username/email or password.' });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: 'Invalid username/email or password.' });
-    }
-
-    // Sign JWT
-    const token = jwt.sign(
-      { id: user._id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      token,
-      user: {
-        username: user.username,
-        fullName: user.name,
-        avatar: user.avatar,
-        bio: user.bio,
-        role: user.role,
-        followers: user.followers,
-        following: user.following
-      }
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error during login.' });
-  }
-});
-
-// Get profile details
-app.get('/api/auth/me', authenticateJWT, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-    res.json({
-      username: user.username,
-      fullName: user.name,
-      avatar: user.avatar,
-      bio: user.bio,
-      role: user.role,
-      followers: user.followers,
-      following: user.following
-    });
-  } catch (error) {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
+    const admin = await Admin.findOne({ email: email.toLowerCase().trim() });
+    if (!admin) return res.status(400).json({ error: 'No admin found with that email.' });
+    const ok = await bcrypt.compare(password, admin.password);
+    if (!ok) return res.status(400).json({ error: 'Incorrect password.' });
+    const token = jwt.sign({ id: admin._id, email: admin.email, name: admin.name }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, admin: { id: admin._id, name: admin.name, email: admin.email, avatar: admin.avatar } });
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// --- POST ENDPOINTS ---
-
-// Fetch feed posts
-app.get('/api/posts', async (req, res) => {
+app.get('/api/admin/me', authAdmin, async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.json(posts);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch posts.' });
+    const admin = await Admin.findById(req.admin.id).select('-password');
+    if (!admin) return res.status(404).json({ error: 'Admin not found.' });
+    res.json(admin);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// Create Post (Admin only)
-app.post('/api/posts', authenticateJWT, async (req, res) => {
+// Get all admins (for display)
+app.get('/api/admins', authAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden. Admins only.' });
-    }
-
-    const { image, caption, location } = req.body;
-    if (!image) {
-      return res.status(400).json({ error: 'Image URL is required.' });
-    }
-
-    const user = await User.findById(req.user.id);
-
-    const newPost = new Post({
-      username: user.username,
-      avatar: user.avatar,
-      verified: true,
-      location: location || 'San Francisco, CA',
-      image,
-      caption: caption || '',
-      likes: [],
-      comments: []
-    });
-
-    await newPost.save();
-    res.status(201).json(newPost);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create post.' });
+    const admins = await Admin.find().select('-password');
+    res.json(admins);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// Like / Unlike Post
-app.post('/api/posts/:id/like', authenticateJWT, async (req, res) => {
+// --- EVENTS ---
+app.get('/api/events', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found.' });
-    }
-
-    const index = post.likes.indexOf(req.user.username);
-    if (index > -1) {
-      post.likes.splice(index, 1); // Unlike
-    } else {
-      post.likes.push(req.user.username); // Like
-    }
-
-    await post.save();
-    res.json({ likes: post.likes });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to toggle like.' });
+    const events = await Event.find().sort({ createdAt: -1 });
+    res.json(events);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// Comment on Post
-app.post('/api/posts/:id/comment', authenticateJWT, async (req, res) => {
+app.post('/api/events', authAdmin, async (req, res) => {
   try {
-    const { text } = req.body;
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: 'Comment text cannot be empty.' });
-    }
-
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found.' });
-    }
-
-    post.comments.push({
-      user: req.user.username,
-      text: text.trim(),
-      createdAt: new Date()
-    });
-
-    await post.save();
-    res.status(201).json(post.comments);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to add comment.' });
+    const { title, description, date, time, location, category, image, tags } = req.body;
+    if (!title || !description || !date) return res.status(400).json({ error: 'Title, description and date are required.' });
+    const ev = new Event({ title, description, date, time, location, category, image, tags: tags || [], adminName: req.admin.name, adminId: req.admin.id });
+    await ev.save();
+    res.status(201).json(ev);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// --- CHAT ENDPOINTS ---
-
-// Fetch conversation messages
-app.get('/api/chats/:receiverUsername', authenticateJWT, async (req, res) => {
+app.put('/api/events/:id', authAdmin, async (req, res) => {
   try {
-    const messages = await Message.find({
-      $or: [
-        { senderUsername: req.user.username, receiverUsername: req.params.receiverUsername },
-        { senderUsername: req.params.receiverUsername, receiverUsername: req.user.username }
-      ]
-    }).sort({ createdAt: 1 });
-
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch messages.' });
+    const ev = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!ev) return res.status(404).json({ error: 'Event not found.' });
+    res.json(ev);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// Send message (with simulation of automated bot replies for mock users)
-app.post('/api/chats/message', authenticateJWT, async (req, res) => {
+app.delete('/api/events/:id', authAdmin, async (req, res) => {
   try {
-    const { receiverUsername, text } = req.body;
-    if (!receiverUsername || !text || !text.trim()) {
-      return res.status(400).json({ error: 'Receiver username and message text are required.' });
-    }
-
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Store sender message
-    const newMessage = new Message({
-      senderUsername: req.user.username,
-      receiverUsername,
-      text: text.trim(),
-      time: timeStr
-    });
-    await newMessage.save();
-
-    res.status(201).json(newMessage);
-
-    // Simulated Auto-Reply for default mock accounts
-    const mockAccounts = ['travel_bug', 'tech_guru', 'design_inspire'];
-    if (mockAccounts.includes(receiverUsername)) {
-      setTimeout(async () => {
-        const replies = [
-          `That sounds awesome! Let's definitely do that.`,
-          `Haha, totally agree with you! 🙌`,
-          `Oh cool! Thanks for sharing.`,
-          `I'll be online in a bit, let's jump on a quick call if you have time.`,
-          `Perfect! Talk to you soon.`
-        ];
-        const botText = replies[Math.floor(Math.random() * replies.length)];
-        const botReply = new Message({
-          senderUsername: receiverUsername,
-          receiverUsername: req.user.username,
-          text: botText,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-        await botReply.save();
-      }, 1500);
-    }
-
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to send message.' });
+    const ev = await Event.findByIdAndDelete(req.params.id);
+    if (!ev) return res.status(404).json({ error: 'Event not found.' });
+    res.json({ message: 'Event deleted.' });
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// Serve frontend routing fallback
-app.get('/:page.html', (req, res, next) => {
-  res.sendFile(path.join(__dirname, 'public', req.params.page + '.html'), (err) => {
-    if (err) next();
-  });
+app.post('/api/events/:id/like', async (req, res) => {
+  try {
+    const { action } = req.body; // 'like' or 'unlike'
+    const inc = action === 'unlike' ? -1 : 1;
+    const ev = await Event.findByIdAndUpdate(req.params.id, { $inc: { likes: inc } }, { new: true });
+    if (!ev) return res.status(404).json({ error: 'Event not found.' });
+    res.json({ likes: ev.likes });
+  } catch { res.status(500).json({ error: 'Server error.' }); }
 });
 
+// --- NEWS ---
+app.get('/api/news', async (req, res) => {
+  try {
+    const news = await News.find().sort({ createdAt: -1 });
+    res.json(news);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.post('/api/news', authAdmin, async (req, res) => {
+  try {
+    const { title, content, summary, category, image, tags } = req.body;
+    if (!title || !content) return res.status(400).json({ error: 'Title and content are required.' });
+    const news = new News({ title, content, summary, category, image, tags: tags || [], adminName: req.admin.name, adminId: req.admin.id });
+    await news.save();
+    res.status(201).json(news);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.put('/api/news/:id', authAdmin, async (req, res) => {
+  try {
+    const news = await News.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!news) return res.status(404).json({ error: 'News not found.' });
+    res.json(news);
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.delete('/api/news/:id', authAdmin, async (req, res) => {
+  try {
+    const news = await News.findByIdAndDelete(req.params.id);
+    if (!news) return res.status(404).json({ error: 'News not found.' });
+    res.json({ message: 'News deleted.' });
+  } catch {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.post('/api/news/:id/like', async (req, res) => {
+  try {
+    const { action } = req.body;
+    const inc = action === 'unlike' ? -1 : 1;
+    const news = await News.findByIdAndUpdate(req.params.id, { $inc: { likes: inc } }, { new: true });
+    if (!news) return res.status(404).json({ error: 'News not found.' });
+    res.json({ likes: news.likes });
+  } catch { res.status(500).json({ error: 'Server error.' }); }
+});
+
+// Fallback
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- DATABASE SEEDER ---
-async function seedDatabase() {
-  try {
-    // 1. Seed Users (Standard admin user)
-    const existsAdmin = await User.findOne({ email: 'achark659@gmail.com' });
-    if (!existsAdmin) {
-      const hashedAdminPassword = await bcrypt.hash('achark659@gmail.com', 10);
-      const adminUser = new User({
-        username: 'achark659',
-        name: 'Admin achark659',
-        email: 'achark659@gmail.com',
-        phoneNumber: '+15550199',
-        password: hashedAdminPassword,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        bio: 'Platform Administrator Operations Account.',
-        followers: '250',
-        following: '98',
-        role: 'admin'
-      });
-      await adminUser.save();
-      console.log('Seeded Admin User: email: achark659@gmail.com, password: achark659@gmail.com');
-    } else if (existsAdmin.role !== 'admin') {
-      const hashedAdminPassword = await bcrypt.hash('achark659@gmail.com', 10);
-      existsAdmin.role = 'admin';
-      existsAdmin.password = hashedAdminPassword;
-      await existsAdmin.save();
-      console.log('Updated existing user to Admin User: achark659@gmail.com');
+// --- SEED 6 ADMINS ---
+async function seedAdmins() {
+  const admins = [
+    { name: 'Alex Johnson',   email: 'alex@eventhub.com',  password: 'admin123' },
+    { name: 'Sarah Williams', email: 'sarah@eventhub.com', password: 'admin123' },
+    { name: 'Mike Chen',      email: 'mike@eventhub.com',  password: 'admin123' },
+    { name: 'Emma Davis',     email: 'emma@eventhub.com',  password: 'admin123' },
+    { name: 'James Brown',    email: 'james@eventhub.com', password: 'admin123' },
+    { name: 'Priya Patel',    email: 'priya@eventhub.com', password: 'admin123' },
+  ];
+  for (const a of admins) {
+    const exists = await Admin.findOne({ email: a.email });
+    if (!exists) {
+      const hashed = await bcrypt.hash(a.password, 10);
+      await new Admin({ name: a.name, email: a.email, password: hashed }).save();
+      console.log(`Seeded admin: ${a.email}`);
     }
-
-    // 2. Cleanup all non-admin users and mock data as requested
-    const userDeleteResult = await User.deleteMany({ role: { $ne: 'admin' } });
-    const postDeleteResult = await Post.deleteMany({});
-    const messageDeleteResult = await Message.deleteMany({});
-    console.log(`Database cleanup completed: deleted ${userDeleteResult.deletedCount} non-admin users, ${postDeleteResult.deletedCount} posts, and ${messageDeleteResult.deletedCount} message logs.`);
-  } catch (err) {
-    console.error('Error seeding database:', err);
   }
 }
 
-// Start Server
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`EventHub running → http://localhost:${PORT}`));
 }
 
 module.exports = app;

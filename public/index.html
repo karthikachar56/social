@@ -1,218 +1,499 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InstaVibe - Login</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            pink: '#E1306C',
-                            purple: '#833AB4',
-                            orange: '#F56040',
-                            yellow: '#FCAF45',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
-                }
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EventHub — Events & News</title>
+  <meta name="description" content="Stay updated with the latest events and news from EventHub.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { DEFAULT: '#7C3AED', light: '#8B5CF6', dark: '#6D28D9' },
+            surface: { DEFAULT: '#0F0F1A', card: '#16162A', border: '#2A2A4A' }
+          }
         }
-    </script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- AlpineJS -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0F0F1A; color: #E2E8F0; }
+    .glass { background: rgba(22, 22, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(124, 58, 237, 0.15); }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2); }
+    .gradient-text { background: linear-gradient(135deg, #7C3AED, #EC4899, #F59E0B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-bg { background: radial-gradient(ellipse at 60% 0%, rgba(124,58,237,0.25) 0%, transparent 60%), radial-gradient(ellipse at 10% 80%, rgba(236,72,153,0.15) 0%, transparent 50%), #0F0F1A; }
+    .tab-active { background: linear-gradient(135deg, #7C3AED, #8B5CF6); color: white; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+    .badge-event { background: rgba(124,58,237,0.2); color: #A78BFA; border: 1px solid rgba(124,58,237,0.3); }
+    .badge-news { background: rgba(236,72,153,0.2); color: #F9A8D4; border: 1px solid rgba(236,72,153,0.3); }
+    .badge-cat { background: rgba(245,158,11,0.15); color: #FCD34D; border: 1px solid rgba(245,158,11,0.25); }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0F0F1A; } ::-webkit-scrollbar-thumb { background: #7C3AED; border-radius: 3px; }
+    @keyframes fade-up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fade-up 0.5s ease forwards; }
+    .skeleton { background: linear-gradient(90deg, #1e1e35 25%, #2a2a4a 50%, #1e1e35 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    @keyframes heart-pop { 0%{transform:scale(1)} 40%{transform:scale(1.4)} 70%{transform:scale(0.9)} 100%{transform:scale(1)} }
+    .heart-pop { animation: heart-pop 0.4s ease forwards; }
+    .action-btn { display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600; transition:all 0.2s; cursor:pointer; border:1px solid transparent; background:transparent; }
+    .action-btn:hover { background:rgba(255,255,255,0.05); }
+    .action-btn.liked { color:#F43F5E; }
+    .action-btn.liked svg { fill:#F43F5E; stroke:#F43F5E; }
+    .toast-copy { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(22,22,42,0.95); border:1px solid rgba(124,58,237,0.4); color:#A78BFA; padding:10px 20px; border-radius:10px; font-size:13px; font-weight:600; z-index:9999; transition:opacity 0.3s; pointer-events:none; }
+  </style>
 </head>
-<body class="bg-neutral-50 dark:bg-black text-neutral-900 dark:text-neutral-100 font-sans min-h-screen flex flex-col justify-between transition-colors duration-300"
-      x-data="loginState()" x-init="init()">
+<body x-data="userApp()" x-init="init()" class="min-h-screen">
 
-    <!-- Top Theme Toggle Button -->
-    <div class="absolute top-4 right-4 z-50">
-        <button @click="toggleDarkMode()" class="p-2.5 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:scale-105 transition shadow-sm">
-            <i :data-lucide="darkMode ? 'sun' : 'moon'" class="w-5 h-5 text-yellow-500 dark:text-purple-400"></i>
-        </button>
-    </div>
-
-    <!-- Main Container -->
-    <div class="flex-1 flex items-center justify-center p-4">
-        <div class="w-full max-w-md bg-white dark:bg-neutral-900/50 dark:backdrop-blur-md border border-neutral-200 dark:border-neutral-800 p-8 rounded-2xl shadow-xl space-y-8 relative overflow-hidden">
-            
-            <!-- Instagram Gradient Mesh Background Glows -->
-            <div class="absolute -top-16 -left-16 w-32 h-32 bg-gradient-to-tr from-brand-yellow to-brand-pink opacity-20 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-gradient-to-tr from-brand-purple to-brand-orange opacity-25 rounded-full blur-2xl pointer-events-none"></div>
-
-            <!-- Header logo -->
-            <div class="text-center relative z-10">
-                <h1 class="text-4xl font-serif font-bold tracking-wide bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 bg-clip-text text-transparent mb-2">
-                    InstaVibe
-                </h1>
-                <p class="text-sm text-neutral-400">Enter your credentials to access your dashboard</p>
-            </div>
-
-            <!-- Login form -->
-            <form @submit.prevent="handleLogin()" class="space-y-5 relative z-10">
-                <!-- Error Alert Box -->
-                <div x-show="errorMessage" x-transition class="p-3 bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
-                    <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
-                    <span x-text="errorMessage"></span>
-                </div>
-
-
-                <!-- Username/Email input -->
-                <div class="space-y-1">
-                    <label class="block text-xs font-bold text-neutral-400 uppercase tracking-wider">Email or Username</label>
-                    <div class="relative">
-                        <input type="text" x-model="identifier" placeholder="e.g. karthik_codes or user@domain.com" required
-                               class="w-full py-3 pl-10 pr-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-brand-pink focus:border-transparent dark:text-white transition">
-                        <i data-lucide="user" class="absolute left-3.5 top-3.5 w-4 h-4 text-neutral-400"></i>
-                    </div>
-                </div>
-
-                <!-- Password input -->
-                <div class="space-y-1">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold text-neutral-400 uppercase tracking-wider">Password</label>
-                        <a href="#" class="text-xs text-neutral-400 hover:text-brand-pink transition">Forgot password?</a>
-                    </div>
-                    <div class="relative">
-                        <input :type="showPassword ? 'text' : 'password'" x-model="password" placeholder="••••••••" required
-                               class="w-full py-3 pl-10 pr-12 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-brand-pink focus:border-transparent dark:text-white transition">
-                        <i data-lucide="lock" class="absolute left-3.5 top-3.5 w-4 h-4 text-neutral-400"></i>
-                        
-                        <!-- Toggle Password visibility icon -->
-                        <button type="button" @click="showPassword = !showPassword" 
-                                class="absolute right-3.5 top-3 text-neutral-400 hover:text-black dark:hover:text-white transition">
-                            <i :data-lucide="showPassword ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="w-full py-3 bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-600 hover:opacity-95 text-white font-semibold rounded-xl text-sm transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                        :disabled="isLoading">
-                    <span x-show="!isLoading" class="flex items-center justify-center gap-1.5">
-                        Log In <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                    </span>
-                    <span x-show="isLoading" class="flex items-center justify-center gap-2">
-                        <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Logging in...
-                    </span>
-                </button>
-            </form>
-
-            <!-- Bottom redirect to Sign up -->
-            <div class="text-center text-sm text-neutral-500 relative z-10 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                Don't have an account? 
-                <a href="register.html" class="font-bold text-brand-pink hover:underline">Sign up</a>
-            </div>
-
+  <!-- NAVBAR -->
+  <nav class="sticky top-0 z-50 glass border-b border-surface-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-pink-500 flex items-center justify-center">
+          <i data-lucide="zap" class="w-4 h-4 text-white"></i>
         </div>
+        <span class="text-lg font-bold gradient-text">EventHub</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400 hidden sm:block">Live updates from our admins</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-bg py-20 px-4 text-center">
+    <div class="max-w-3xl mx-auto fade-up">
+      <span class="badge badge-event mb-4 uppercase tracking-widest">Live Platform</span>
+      <h1 class="text-4xl sm:text-6xl font-black mb-4 leading-tight">
+        Discover <span class="gradient-text">Events</span><br>& Latest <span class="gradient-text">News</span>
+      </h1>
+      <p class="text-slate-400 text-lg mb-8 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
+      <div class="flex items-center justify-center gap-4 text-sm text-slate-400">
+        <div class="flex items-center gap-1.5"><div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div> Live Updates</div>
+        <span>•</span>
+        <div class="flex items-center gap-1.5"><i data-lucide="users" class="w-4 h-4 text-brand-light"></i> <span x-text="stats.admins + ' Active Admins'"></span></div>
+        <span>•</span>
+        <div class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4 text-brand-light"></i> <span x-text="stats.events + ' Events'"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEARCH + TABS -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+    <!-- Search -->
+    <div class="relative max-w-lg mx-auto mb-8">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"></i>
+      <input type="text" placeholder="Search events and news..." x-model="searchQuery"
+             class="w-full pl-10 pr-4 py-3 rounded-xl bg-surface-card border border-surface-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand transition">
     </div>
 
-    <!-- Minimal footer -->
-    <footer class="py-6 text-center text-xs text-neutral-400 tracking-wide">
-        &copy; 2026 INSTAVIBE PLATFORM. ALL RIGHTS RESERVED.
-    </footer>
+    <!-- Tabs -->
+    <div class="flex items-center gap-2 mb-8 bg-surface-card rounded-xl p-1.5 w-fit mx-auto border border-surface-border">
+      <button @click="activeTab='events'" :class="activeTab==='events' ? 'tab-active' : 'text-slate-400 hover:text-white'"
+              class="px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2">
+        <i data-lucide="calendar" class="w-4 h-4"></i> Events
+        <span class="ml-1 px-2 py-0.5 rounded-full text-xs" :class="activeTab==='events' ? 'bg-white/20' : 'bg-surface-border'" x-text="filteredEvents.length"></span>
+      </button>
+      <button @click="activeTab='news'" :class="activeTab==='news' ? 'tab-active' : 'text-slate-400 hover:text-white'"
+              class="px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2">
+        <i data-lucide="newspaper" class="w-4 h-4"></i> News
+        <span class="ml-1 px-2 py-0.5 rounded-full text-xs" :class="activeTab==='news' ? 'bg-white/20' : 'bg-surface-border'" x-text="filteredNews.length"></span>
+      </button>
+    </div>
 
-    <!-- Scripts -->
-    <script>
-        function loginState() {
-            return {
-                darkMode: localStorage.getItem('darkMode') === 'true',
-                role: 'user',
-                identifier: '',
-                password: '',
-                showPassword: false,
-                errorMessage: '',
-                isLoading: false,
+    <!-- Category Filter -->
+    <div class="flex flex-wrap gap-2 mb-8 justify-center" x-show="activeTab==='events'">
+      <button @click="eventCategory='all'" :class="eventCategory==='all' ? 'bg-brand text-white' : 'bg-surface-card text-slate-400 border border-surface-border hover:border-brand'"
+              class="px-4 py-1.5 rounded-full text-sm font-medium transition">All</button>
+      <template x-for="cat in eventCategories">
+        <button @click="eventCategory=cat" :class="eventCategory===cat ? 'bg-brand text-white' : 'bg-surface-card text-slate-400 border border-surface-border hover:border-brand'"
+                class="px-4 py-1.5 rounded-full text-sm font-medium transition" x-text="cat"></button>
+      </template>
+    </div>
+    <div class="flex flex-wrap gap-2 mb-8 justify-center" x-show="activeTab==='news'">
+      <button @click="newsCategory='all'" :class="newsCategory==='all' ? 'bg-brand text-white' : 'bg-surface-card text-slate-400 border border-surface-border hover:border-brand'"
+              class="px-4 py-1.5 rounded-full text-sm font-medium transition">All</button>
+      <template x-for="cat in newsCategories">
+        <button @click="newsCategory=cat" :class="newsCategory===cat ? 'bg-brand text-white' : 'bg-surface-card text-slate-400 border border-surface-border hover:border-brand'"
+                class="px-4 py-1.5 rounded-full text-sm font-medium transition" x-text="cat"></button>
+      </template>
+    </div>
 
-                init() {
-                    if (this.darkMode) {
-                        document.documentElement.classList.add('dark');
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                    }
-                    this.$watch('darkMode', val => {
-                        localStorage.setItem('darkMode', val);
-                        if (val) {
-                            document.documentElement.classList.add('dark');
-                        } else {
-                            document.documentElement.classList.remove('dark');
-                        }
-                    });
-                    this.$nextTick(() => {
-                        lucide.createIcons();
-                    });
-                    this.$watch('showPassword', () => this.$nextTick(() => lucide.createIcons()));
-                },
+    <!-- LOADING SKELETON -->
+    <div x-show="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <template x-for="i in 6">
+        <div class="rounded-2xl overflow-hidden border border-surface-border">
+          <div class="skeleton h-48 w-full"></div>
+          <div class="p-5 space-y-3">
+            <div class="skeleton h-4 w-2/3 rounded"></div>
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-4/5 rounded"></div>
+          </div>
+        </div>
+      </template>
+    </div>
 
-                toggleDarkMode() {
-                    this.darkMode = !this.darkMode;
-                },
+    <!-- EVENTS GRID -->
+    <div x-show="!loading && activeTab==='events'" x-transition>
+      <div x-show="filteredEvents.length === 0" class="text-center py-20">
+        <div class="w-16 h-16 rounded-2xl bg-surface-card border border-surface-border flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="calendar-x" class="w-8 h-8 text-slate-500"></i>
+        </div>
+        <p class="text-slate-400 font-medium">No events found</p>
+        <p class="text-slate-600 text-sm mt-1">Check back later for upcoming events</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-for="ev in filteredEvents" :key="ev._id">
+          <article class="glass rounded-2xl overflow-hidden card-hover cursor-pointer" @click="openModal(ev, 'event')">
+            <!-- Image -->
+            <div class="relative h-48 bg-gradient-to-br from-brand/30 to-pink-600/20 overflow-hidden">
+              <img x-show="ev.image" :src="ev.image" :alt="ev.title" class="w-full h-full object-cover opacity-80">
+              <div x-show="!ev.image" class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="calendar" class="w-12 h-12 text-brand/50"></i>
+              </div>
+              <div class="absolute top-3 left-3 flex gap-2">
+                <span class="badge badge-event uppercase">Event</span>
+                <span x-show="ev.category" class="badge badge-cat" x-text="ev.category"></span>
+              </div>
+            </div>
+            <!-- Content -->
+            <div class="p-5">
+              <h2 class="font-bold text-white text-lg leading-tight mb-2 line-clamp-2" x-text="ev.title"></h2>
+              <p class="text-slate-400 text-sm line-clamp-2 mb-4" x-text="ev.description"></p>
+              <div class="space-y-1.5 text-xs text-slate-500">
+                <div class="flex items-center gap-2" x-show="ev.date">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-light flex-shrink-0"></i>
+                  <span x-text="formatDate(ev.date) + (ev.time ? ' at ' + ev.time : '')"></span>
+                </div>
+                <div class="flex items-center gap-2" x-show="ev.location">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-pink-400 flex-shrink-0"></i>
+                  <span x-text="ev.location" class="truncate"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-yellow-400 flex-shrink-0"></i>
+                  <span x-text="'Posted by ' + ev.adminName"></span>
+                </div>
+              </div>
+              <!-- Action Bar -->
+              <div class="mt-4 pt-4 border-t border-surface-border flex items-center justify-between">
+                <span class="text-xs text-slate-600" x-text="timeAgo(ev.createdAt)"></span>
+                <div class="flex items-center gap-1" @click.stop>
+                  <!-- Like -->
+                  <button :class="isLiked(ev._id) ? 'action-btn liked' : 'action-btn text-slate-500 hover:text-rose-400'"
+                          @click.stop="toggleLike(ev)" :id="'like-ev-'+ev._id">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span x-text="ev.likes || 0"></span>
+                  </button>
+                  <!-- Download -->
+                  <button class="action-btn text-slate-500 hover:text-brand-light" @click.stop="downloadPost(ev)" title="Download image">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  <!-- Share -->
+                  <button class="action-btn text-slate-500 hover:text-green-400" @click.stop="sharePost(ev)" title="Share">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </template>
+      </div>
+    </div>
 
-                handleLogin() {
-                    this.errorMessage = '';
-                    
-                    // Client-side quick check
-                    if (!this.identifier.trim() || !this.password.trim()) {
-                        this.errorMessage = 'Please fill out all fields.';
-                        return;
-                    }
+    <!-- NEWS GRID -->
+    <div x-show="!loading && activeTab==='news'" x-transition>
+      <div x-show="filteredNews.length === 0" class="text-center py-20">
+        <div class="w-16 h-16 rounded-2xl bg-surface-card border border-surface-border flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="newspaper" class="w-8 h-8 text-slate-500"></i>
+        </div>
+        <p class="text-slate-400 font-medium">No news articles yet</p>
+        <p class="text-slate-600 text-sm mt-1">Check back later for the latest updates</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-for="item in filteredNews" :key="item._id">
+          <article class="glass rounded-2xl overflow-hidden card-hover cursor-pointer" @click="openModal(item, 'news')">
+            <div class="relative h-48 bg-gradient-to-br from-pink-600/20 to-purple-900/30 overflow-hidden">
+              <img x-show="item.image" :src="item.image" :alt="item.title" class="w-full h-full object-cover opacity-80">
+              <div x-show="!item.image" class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="newspaper" class="w-12 h-12 text-pink-500/40"></i>
+              </div>
+              <div class="absolute top-3 left-3 flex gap-2">
+                <span class="badge badge-news uppercase">News</span>
+                <span x-show="item.category" class="badge badge-cat" x-text="item.category"></span>
+              </div>
+            </div>
+            <div class="p-5">
+              <h2 class="font-bold text-white text-lg leading-tight mb-2 line-clamp-2" x-text="item.title"></h2>
+              <p class="text-slate-400 text-sm line-clamp-3 mb-4" x-text="item.summary || item.content"></p>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-yellow-400"></i>
+                <span x-text="item.adminName"></span>
+              </div>
+              <!-- Action Bar -->
+              <div class="mt-4 pt-4 border-t border-surface-border flex items-center justify-between">
+                <span class="text-xs text-slate-600" x-text="timeAgo(item.createdAt)"></span>
+                <div class="flex items-center gap-1" @click.stop>
+                  <!-- Like -->
+                  <button :class="isLiked(item._id) ? 'action-btn liked' : 'action-btn text-slate-500 hover:text-rose-400'"
+                          @click.stop="toggleLike(item)" :id="'like-nw-'+item._id">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span x-text="item.likes || 0"></span>
+                  </button>
+                  <!-- Download -->
+                  <button class="action-btn text-slate-500 hover:text-brand-light" @click.stop="downloadPost(item)" title="Download image">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  <!-- Share -->
+                  <button class="action-btn text-slate-500 hover:text-green-400" @click.stop="sharePost(item)" title="Share">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </template>
+      </div>
+    </div>
+  </div>
 
-                    if (this.password.length < 6) {
-                        this.errorMessage = 'Password must be at least 6 characters.';
-                        return;
-                    }
+  <!-- DETAIL MODAL -->
+  <div x-show="modal.open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+       @click.self="modal.open=false" @keydown.escape.window="modal.open=false" style="display:none">
+    <div class="glass rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+      <div class="relative">
+        <img x-show="modal.data.image" :src="modal.data.image" class="w-full h-56 object-cover rounded-t-2xl">
+        <div x-show="!modal.data.image" class="h-24 bg-gradient-to-r from-brand to-pink-600 rounded-t-2xl"></div>
+        <button @click="modal.open=false" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/80 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <div class="absolute top-3 left-3">
+          <span x-show="modal.type==='event'" class="badge badge-event">Event</span>
+          <span x-show="modal.type==='news'" class="badge badge-news">News</span>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="flex flex-wrap gap-2">
+          <span x-show="modal.data.category" class="badge badge-cat" x-text="modal.data.category"></span>
+          <template x-for="tag in (modal.data.tags || [])">
+            <span class="badge" style="background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3)" x-text="'#'+tag"></span>
+          </template>
+        </div>
+        <h2 class="text-2xl font-bold text-white" x-text="modal.data.title"></h2>
+        <!-- Event specific fields -->
+        <div x-show="modal.type==='event'" class="grid grid-cols-2 gap-3">
+          <div x-show="modal.data.date" class="flex items-center gap-2 text-sm text-slate-400">
+            <i data-lucide="calendar" class="w-4 h-4 text-brand-light flex-shrink-0"></i>
+            <span x-text="formatDate(modal.data.date) + (modal.data.time ? ' at ' + modal.data.time : '')"></span>
+          </div>
+          <div x-show="modal.data.location" class="flex items-center gap-2 text-sm text-slate-400">
+            <i data-lucide="map-pin" class="w-4 h-4 text-pink-400 flex-shrink-0"></i>
+            <span x-text="modal.data.location"></span>
+          </div>
+        </div>
+        <p class="text-slate-300 leading-relaxed whitespace-pre-line" x-text="modal.data.content || modal.data.description"></p>
+        <div class="pt-4 border-t border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-2 text-sm text-slate-500">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand to-pink-500 flex items-center justify-center text-white text-xs font-bold" x-text="modal.data.adminName ? modal.data.adminName[0] : 'A'"></div>
+            <span x-text="modal.data.adminName"></span>
+            <span class="text-slate-700">•</span>
+            <span x-text="modal.data.createdAt ? new Date(modal.data.createdAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : ''"></span>
+          </div>
+          <!-- Modal Action Buttons -->
+          <div class="flex items-center gap-2">
+            <button :class="isLiked(modal.data._id) ? 'action-btn liked' : 'action-btn text-slate-400 hover:text-rose-400 border border-surface-border'"
+                    @click="toggleLike(modal.data)">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span x-text="(modal.data.likes || 0) + ' Likes'"></span>
+            </button>
+            <button class="action-btn text-slate-400 hover:text-brand-light border border-surface-border" @click="downloadPost(modal.data)">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download
+            </button>
+            <button class="action-btn text-slate-400 hover:text-green-400 border border-surface-border" @click="sharePost(modal.data)">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                    // Start spinner
-                    this.isLoading = true;
+  <!-- Copy Toast -->
+  <div id="copyToast" class="toast-copy" style="opacity:0">🔗 Link copied to clipboard!</div>
 
-                    // API login request
-                    fetch('/api/auth/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            identifier: this.identifier,
-                            password: this.password
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        this.isLoading = false;
-                        if (data.error) {
-                            this.errorMessage = data.error;
-                        } else {
-                            if (data.user.role !== 'user') {
-                                this.errorMessage = 'Access Denied. Standard user accounts only.';
-                                return;
-                            }
-                            
-                            localStorage.setItem('token', data.token);
-                            localStorage.setItem('currentUser', JSON.stringify(data.user));
-                            window.location.href = 'dashboard.html';
-                        }
-                    })
-                    .catch(err => {
-                        this.isLoading = false;
-                        this.errorMessage = 'A network error occurred. Please try again.';
-                        console.error('Login error:', err);
-                    });
-                }
-            }
-        }
-    </script>
+  <!-- FOOTER -->
+  <footer class="border-t border-surface-border mt-20 py-10 text-center text-slate-600 text-sm">
+    <div class="flex items-center justify-center gap-2 mb-2">
+      <div class="w-6 h-6 rounded-md bg-gradient-to-br from-brand to-pink-500 flex items-center justify-center">
+        <i data-lucide="zap" class="w-3 h-3 text-white"></i>
+      </div>
+      <span class="font-semibold text-slate-400">EventHub</span>
+    </div>
+    <p>© 2024 EventHub. Powered by our team of admins.</p>
+  </footer>
+
+<script>
+function userApp() {
+  return {
+    activeTab: 'events',
+    loading: true,
+    searchQuery: '',
+    eventCategory: 'all',
+    newsCategory: 'all',
+    events: [],
+    news: [],
+    modal: { open: false, type: '', data: {} },
+    stats: { admins: 6, events: 0, news: 0 },
+    likedPosts: JSON.parse(localStorage.getItem('eh_liked') || '{}'),
+
+    get eventCategories() {
+      return [...new Set(this.events.map(e => e.category).filter(Boolean))];
+    },
+    get newsCategories() {
+      return [...new Set(this.news.map(n => n.category).filter(Boolean))];
+    },
+    get filteredEvents() {
+      return this.events.filter(e => {
+        const q = this.searchQuery.toLowerCase();
+        const matchSearch = !q || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || (e.location||'').toLowerCase().includes(q);
+        const matchCat = this.eventCategory === 'all' || e.category === this.eventCategory;
+        return matchSearch && matchCat;
+      });
+    },
+    get filteredNews() {
+      return this.news.filter(n => {
+        const q = this.searchQuery.toLowerCase();
+        const matchSearch = !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+        const matchCat = this.newsCategory === 'all' || n.category === this.newsCategory;
+        return matchSearch && matchCat;
+      });
+    },
+
+    async init() {
+      await Promise.all([this.fetchEvents(), this.fetchNews()]);
+      this.loading = false;
+      this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    },
+
+    async fetchEvents() {
+      try {
+        const r = await fetch('/api/events');
+        this.events = await r.json();
+        this.stats.events = this.events.length;
+      } catch(e) { console.error(e); }
+    },
+
+    async fetchNews() {
+      try {
+        const r = await fetch('/api/news');
+        this.news = await r.json();
+        this.stats.news = this.news.length;
+      } catch(e) { console.error(e); }
+    },
+
+    openModal(data, type) {
+      this.modal = { open: true, type, data };
+      this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    },
+
+    isLiked(id) {
+      return !!this.likedPosts[id];
+    },
+
+    async toggleLike(item) {
+      const id = item._id;
+      const alreadyLiked = this.likedPosts[id];
+      const action = alreadyLiked ? 'unlike' : 'like';
+      // Optimistic update
+      item.likes = (item.likes || 0) + (alreadyLiked ? -1 : 1);
+      if (alreadyLiked) delete this.likedPosts[id];
+      else this.likedPosts[id] = true;
+      localStorage.setItem('eh_liked', JSON.stringify(this.likedPosts));
+      // Heart pop animation
+      const btn = document.getElementById('like-ev-' + id) || document.getElementById('like-nw-' + id);
+      if (btn) { btn.classList.add('heart-pop'); setTimeout(() => btn.classList.remove('heart-pop'), 400); }
+      // Sync with server
+      const type = this.events.find(e => e._id === id) ? 'events' : 'news';
+      try {
+        const r = await fetch('/api/' + type + '/' + id + '/like', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const d = await r.json();
+        if (d.likes !== undefined) item.likes = d.likes;
+        // sync modal if open
+        if (this.modal.open && this.modal.data._id === id) this.modal.data.likes = d.likes;
+      } catch {}
+    },
+
+    downloadPost(item) {
+      if (item.image) {
+        const a = document.createElement('a');
+        a.href = item.image;
+        a.download = item.title.replace(/\s+/g, '_') + '_image';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        // Download as text file if no image
+        const content = `${item.title}\n\n${item.description || item.content}\n\nPosted by: ${item.adminName}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.title.replace(/\s+/g, '_') + '.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    },
+
+    async sharePost(item) {
+      const url = window.location.origin + '/?id=' + item._id;
+      const shareData = {
+        title: item.title,
+        text: (item.summary || item.description || item.content || '').slice(0, 120) + '...',
+        url
+      };
+      if (navigator.share) {
+        try { await navigator.share(shareData); } catch {}
+      } else {
+        try {
+          await navigator.clipboard.writeText(url);
+          const toast = document.getElementById('copyToast');
+          toast.style.opacity = '1';
+          setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+        } catch {}
+      }
+    },
+
+    formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    },
+
+    timeAgo(d) {
+      if (!d) return '';
+      const diff = (Date.now() - new Date(d)) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+      return Math.floor(diff/86400) + 'd ago';
+    }
+  }
+}
+</script>
 </body>
 </html>
