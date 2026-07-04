@@ -177,22 +177,22 @@ export default function Home() {
 
   if (authLoading || !token) {
     return (
-      <div className="min-h-screen bg-[#0F0F1A] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-purple-500/20 animate-pulse">
             <Zap className="w-8 h-8 text-white fill-white" />
           </div>
-          <p className="text-slate-400 text-sm font-semibold tracking-wider uppercase animate-pulse">Loading EventHub...</p>
+          <p className="text-slate-500 text-sm font-semibold tracking-wider uppercase animate-pulse">Loading EventHub...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0F1A] text-[#E2E8F0] font-sans selection:bg-purple-600/40">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-purple-600/40">
       
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 glass border-b border-[#2A2A4A]/50">
+      <nav className="sticky top-0 z-50 glass border-b border-slate-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
@@ -207,7 +207,7 @@ export default function Home() {
                 {user ? (
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col text-right hidden md:block">
-                      <span className="text-xs text-slate-400">Logged in as</span>
+                      <span className="text-xs text-slate-500">Logged in as</span>
                       <span className="text-sm font-semibold text-purple-200">{user.name}</span>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
@@ -220,13 +220,13 @@ export default function Home() {
                       </Link>
                     ) : null}
 
-                    <button onClick={logout} className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition" title="Sign Out">
+                    <button onClick={logout} className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/20 transition" title="Sign Out">
                       <LogOut className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Link href="/login" className="px-3.5 py-1.5 rounded-lg border border-[#2A2A4A] text-xs font-semibold hover:border-purple-600 transition text-slate-300 hover:text-white">
+                    <Link href="/login" className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-purple-600 transition text-slate-600 hover:text-white">
                       Sign In
                     </Link>
                     <Link href="/register" className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-xs font-semibold hover:opacity-90 transition text-white shadow-md shadow-purple-600/20">
@@ -247,8 +247,8 @@ export default function Home() {
           <h1 className="text-4xl sm:text-6xl font-black mb-4 leading-tight">
             Discover <span className="gradient-text">Events</span><br />& Latest <span class="gradient-text">News</span>
           </h1>
-          <p className="text-slate-400 text-base sm:text-lg mb-8 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
-          <div className="flex items-center justify-center gap-4 text-xs sm:text-sm text-slate-400">
+          <p className="text-slate-500 text-base sm:text-lg mb-8 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
+          <div className="flex items-center justify-center gap-4 text-xs sm:text-sm text-slate-500">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div> Live Updates
             </div>
@@ -277,21 +277,21 @@ export default function Home() {
             placeholder="Search events and news..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#16162A] border border-[#2A2A4A] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-inner"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-inner"
           />
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 mb-8 bg-[#16162A] rounded-xl p-1.5 w-fit mx-auto border border-[#2A2A4A]">
+        <div className="flex items-center gap-2 mb-8 bg-white rounded-xl p-1.5 w-fit mx-auto border border-slate-200">
           <button 
             onClick={() => setActiveTab('events')} 
             className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2 ${
-              activeTab === 'events' ? 'tab-active shadow-md' : 'text-slate-400 hover:text-white'
+              activeTab === 'events' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-white'
             }`}
           >
             <Calendar className="w-4 h-4" /> Events
             <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-[#2A2A4A] text-slate-400'
+              activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
             }`}>
               {filteredEvents.length}
             </span>
@@ -300,12 +300,12 @@ export default function Home() {
           <button 
             onClick={() => setActiveTab('news')} 
             className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2 ${
-              activeTab === 'news' ? 'tab-active shadow-md' : 'text-slate-400 hover:text-white'
+              activeTab === 'news' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-white'
             }`}
           >
             <Newspaper className="w-4 h-4" /> News
             <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'news' ? 'bg-white/20 text-white' : 'bg-[#2A2A4A] text-slate-400'
+              activeTab === 'news' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
             }`}>
               {filteredNews.length}
             </span>
@@ -322,7 +322,7 @@ export default function Home() {
                 className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition border ${
                   eventCategory === cat 
                     ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                    : 'bg-[#16162A] text-slate-400 border-[#2A2A4A] hover:border-purple-600/50 hover:text-white'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-white'
                 }`}
               >
                 {cat}
@@ -338,7 +338,7 @@ export default function Home() {
                 className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition border ${
                   newsCategory === cat 
                     ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                    : 'bg-[#16162A] text-slate-400 border-[#2A2A4A] hover:border-purple-600/50 hover:text-white'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-white'
                 }`}
               >
                 {cat}
@@ -351,9 +351,9 @@ export default function Home() {
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="rounded-2xl overflow-hidden border border-[#2A2A4A]">
+              <div key={i} className="rounded-2xl overflow-hidden border border-slate-200">
                 <div className="skeleton h-48 w-full"></div>
-                <div className="p-5 space-y-3 bg-[#16162A]/50">
+                <div className="p-5 space-y-3 bg-slate-100/50">
                   <div className="skeleton h-4 w-2/3 rounded"></div>
                   <div className="skeleton h-4 w-full rounded"></div>
                   <div className="skeleton h-4 w-4/5 rounded"></div>
@@ -367,11 +367,11 @@ export default function Home() {
         {!loading && activeTab === 'events' && (
           <div>
             {filteredEvents.length === 0 ? (
-              <div className="text-center py-20 bg-[#16162A]/20 border border-[#2A2A4A]/50 rounded-2xl">
-                <div className="w-16 h-16 rounded-2xl bg-[#16162A] border border-[#2A2A4A] flex items-center justify-center mx-auto mb-4">
+              <div className="text-center py-20 bg-slate-100/50 border border-slate-200/50 rounded-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto mb-4">
                   <CalendarX className="w-8 h-8 text-slate-500" />
                 </div>
-                <p className="text-slate-400 font-medium">No events found</p>
+                <p className="text-slate-500 font-medium">No events found</p>
                 <p className="text-slate-600 text-sm mt-1">Check back later for upcoming events</p>
               </div>
             ) : (
@@ -401,7 +401,7 @@ export default function Home() {
                       <h2 className="font-bold text-white text-lg leading-tight mb-2 line-clamp-2 hover:text-purple-300 transition-colors">
                         {ev.title}
                       </h2>
-                      <p className="text-slate-400 text-sm line-clamp-2 mb-4 flex-grow">
+                      <p className="text-slate-500 text-sm line-clamp-2 mb-4 flex-grow">
                         {ev.description}
                       </p>
                       <div className="space-y-1.5 text-xs text-slate-500 mt-auto">
@@ -424,7 +424,7 @@ export default function Home() {
                       </div>
                       
                       {/* Action Bar */}
-                      <div className="mt-4 pt-4 border-t border-[#2A2A4A]/60 flex items-center justify-between">
+                      <div className="mt-4 pt-4 border-t border-slate-200/50 flex items-center justify-between">
                         <span className="text-[10px] text-slate-500 font-medium">
                           {timeAgo(ev.createdAt)}
                         </span>
@@ -464,11 +464,11 @@ export default function Home() {
         {!loading && activeTab === 'news' && (
           <div>
             {filteredNews.length === 0 ? (
-              <div className="text-center py-20 bg-[#16162A]/20 border border-[#2A2A4A]/50 rounded-2xl">
-                <div className="w-16 h-16 rounded-2xl bg-[#16162A] border border-[#2A2A4A] flex items-center justify-center mx-auto mb-4">
+              <div className="text-center py-20 bg-slate-100/50 border border-slate-200/50 rounded-2xl">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mx-auto mb-4">
                   <Newspaper className="w-8 h-8 text-slate-500" />
                 </div>
-                <p className="text-slate-400 font-medium">No news articles yet</p>
+                <p className="text-slate-500 font-medium">No news articles yet</p>
                 <p className="text-slate-600 text-sm mt-1">Check back later for the latest updates</p>
               </div>
             ) : (
@@ -496,7 +496,7 @@ export default function Home() {
                       <h2 className="font-bold text-white text-lg leading-tight mb-2 line-clamp-2 hover:text-pink-300 transition-colors">
                         {item.title}
                       </h2>
-                      <p className="text-slate-400 text-sm line-clamp-3 mb-4 flex-grow">
+                      <p className="text-slate-500 text-sm line-clamp-3 mb-4 flex-grow">
                         {item.summary || item.content}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-auto">
@@ -505,7 +505,7 @@ export default function Home() {
                       </div>
                       
                       {/* Action Bar */}
-                      <div className="mt-4 pt-4 border-t border-[#2A2A4A]/60 flex items-center justify-between">
+                      <div className="mt-4 pt-4 border-t border-slate-200/50 flex items-center justify-between">
                         <span className="text-[10px] text-slate-500 font-medium">
                           {timeAgo(item.createdAt)}
                         </span>
@@ -598,15 +598,15 @@ export default function Home() {
               
               {/* Event details */}
               {modal.type === 'event' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#16162A]/40 p-3 rounded-xl border border-[#2A2A4A]/40 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-100/50 p-3 rounded-xl border border-slate-200/50 text-sm">
                   {modal.data.date && (
-                    <div className="flex items-center gap-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-slate-500">
                       <Calendar className="w-4 h-4 text-purple-400 flex-shrink-0" />
                       <span>{formatDate(modal.data.date)}{modal.data.time ? ` at ${modal.data.time}` : ''}</span>
                     </div>
                   )}
                   {modal.data.location && (
-                    <div className="flex items-center gap-2 text-slate-400">
+                    <div className="flex items-center gap-2 text-slate-500">
                       <MapPin className="w-4 h-4 text-pink-400 flex-shrink-0" />
                       <span>{modal.data.location}</span>
                     </div>
@@ -614,16 +614,16 @@ export default function Home() {
                 </div>
               )}
               
-              <p className="text-slate-300 leading-relaxed whitespace-pre-line text-sm sm:text-base">
+              <p className="text-slate-600 leading-relaxed whitespace-pre-line text-sm sm:text-base">
                 {modal.data.content || modal.data.description}
               </p>
               
-              <div className="pt-4 border-t border-[#2A2A4A]/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="pt-4 border-t border-slate-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5 text-xs sm:text-sm text-slate-500">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
                     {modal.data.adminName ? modal.data.adminName[0].toUpperCase() : 'A'}
                   </div>
-                  <span className="font-semibold text-slate-300">{modal.data.adminName}</span>
+                  <span className="font-semibold text-slate-600">{modal.data.adminName}</span>
                   <span>•</span>
                   <span>{modal.data.createdAt ? new Date(modal.data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</span>
                 </div>
@@ -631,8 +631,8 @@ export default function Home() {
                 {/* Modal Action Buttons */}
                 <div className="flex items-center gap-2">
                   <button 
-                    className={`action-btn px-4 py-2 border border-[#2A2A4A] rounded-xl hover:border-rose-500/50 ${
-                      isLiked(modal.data._id) ? 'liked' : 'text-slate-400'
+                    className={`action-btn px-4 py-2 border border-slate-200 rounded-xl hover:border-rose-500/50 ${
+                      isLiked(modal.data._id) ? 'liked' : 'text-slate-500'
                     }`}
                     onClick={() => handleLike(modal.data, modal.type)}
                   >
@@ -643,14 +643,14 @@ export default function Home() {
                   </button>
                   
                   <button 
-                    className="action-btn text-slate-400 hover:text-purple-400 border border-[#2A2A4A] px-3.5 py-2 rounded-xl transition" 
+                    className="action-btn text-slate-500 hover:text-purple-400 border border-slate-200 px-3.5 py-2 rounded-xl transition" 
                     onClick={() => downloadPost(modal.data)}
                   >
                     <Download className="w-4 h-4" />
                   </button>
                   
                   <button 
-                    className="action-btn text-slate-400 hover:text-green-400 border border-[#2A2A4A] px-3.5 py-2 rounded-xl transition" 
+                    className="action-btn text-slate-500 hover:text-green-400 border border-slate-200 px-3.5 py-2 rounded-xl transition" 
                     onClick={() => sharePost(modal.data)}
                   >
                     <Share2 className="w-4 h-4" />
@@ -674,18 +674,18 @@ export default function Home() {
 
       {/* Copy Toast */}
       {showToast && (
-        <div className="toast-copy shadow-lg bg-[#16162A] text-purple-300 border border-purple-500/30 flex items-center gap-2">
+        <div className="toast-copy shadow-lg bg-white text-purple-300 border border-purple-500/30 flex items-center gap-2">
           <span>🔗 Link copied to clipboard!</span>
         </div>
       )}
 
       {/* FOOTER */}
-      <footer className="border-t border-[#2A2A4A]/50 mt-20 py-10 text-center text-slate-500 text-xs sm:text-sm bg-[#16162A]/10">
+      <footer className="border-t border-slate-200/50 mt-20 py-10 text-center text-slate-500 text-xs sm:text-sm bg-slate-100/50">
         <div className="flex items-center justify-center gap-2 mb-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/10">
             <Zap className="w-3 h-3 text-white fill-white" />
           </div>
-          <span className="font-semibold text-slate-400">EventHub</span>
+          <span className="font-semibold text-slate-500">EventHub</span>
         </div>
         <p>© 2024 EventHub. Powered by our team of admins.</p>
         {role === 'admin' ? (
@@ -698,3 +698,4 @@ export default function Home() {
     </div>
   );
 }
+

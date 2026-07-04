@@ -339,7 +339,7 @@ export default function AdminDashboard() {
 
   if (authLoading || !user || role !== 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F0F1A]">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <svg className="w-8 h-8 animate-spin text-purple-500" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -349,7 +349,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#0F0F1A] text-[#E2E8F0] relative">
+    <div className="min-h-screen flex bg-slate-50 text-slate-900 relative">
       
       {/* MOBILE OVERLAY */}
       {mobileMenu && (
@@ -366,7 +366,7 @@ export default function AdminDashboard() {
             <Zap className="w-4 h-4 text-white fill-white" />
           </div>
           <span className="font-bold text-white">EventHub</span>
-          <span className="text-xs text-slate-500 ml-auto bg-[#16162A] px-2 py-0.5 border border-[#2A2A4A] rounded-full">Admin</span>
+          <span className="text-xs text-slate-500 ml-auto bg-white px-2 py-0.5 border border-slate-200 rounded-full">Admin</span>
         </div>
 
         {/* Admin Info */}
@@ -384,10 +384,10 @@ export default function AdminDashboard() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1">
-          <Link href="/" className="nav-item w-full mb-3 border border-[#2A2A4A] hover:border-purple-600/50 text-slate-400 hover:text-white transition flex items-center">
+          <Link href="/" className="nav-item w-full mb-3 border border-slate-200 hover:border-purple-600/50 text-slate-500 hover:text-white transition flex items-center">
             <ArrowLeft className="w-4 h-4 flex-shrink-0" /> Back to Site
           </Link>
-          <div className="border-t border-[#2A2A4A] mb-3"></div>
+          <div className="border-t border-slate-200 mb-3"></div>
           
           <button onClick={() => { setPage('dashboard'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'dashboard' ? 'active' : ''}`}>
             <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
@@ -419,8 +419,8 @@ export default function AdminDashboard() {
       <div className="flex-grow min-h-screen flex flex-col min-w-0 w-full pl-0 md:pl-0">
         
         {/* TOP BAR */}
-        <header className="sticky top-0 z-30 flex items-center gap-4 px-4 sm:px-6 h-16 border-b border-[#2A2A4A] bg-[#0F0F1A]/95 backdrop-blur-md">
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+        <header className="sticky top-0 z-30 flex items-center gap-4 px-4 sm:px-6 h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition">
             <Menu className="w-5 h-5" />
           </button>
           <div>
@@ -430,7 +430,7 @@ export default function AdminDashboard() {
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <div className="text-[10px] text-slate-500">Today</div>
-              <div className="text-xs font-semibold text-slate-300">
+              <div className="text-xs font-semibold text-slate-600">
                 {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </div>
@@ -453,7 +453,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-purple-900/30 border border-purple-500/20 flex items-center justify-center">
                       <Calendar className="w-5 h-5 text-purple-400" />
                     </div>
-                    <span className="text-xs sm:text-sm text-slate-400">Total Events</span>
+                    <span className="text-xs sm:text-sm text-slate-500">Total Events</span>
                   </div>
                   <div className="text-3xl font-black text-white">{events.length}</div>
                   <div className="text-[10px] text-slate-500 mt-1">all admins</div>
@@ -464,7 +464,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-pink-900/30 border border-pink-500/20 flex items-center justify-center">
                       <Newspaper className="w-5 h-5 text-pink-400" />
                     </div>
-                    <span className="text-xs sm:text-sm text-slate-400">Total News</span>
+                    <span className="text-xs sm:text-sm text-slate-500">Total News</span>
                   </div>
                   <div className="text-3xl font-black text-white">{news.length}</div>
                   <div className="text-[10px] text-slate-500 mt-1">all admins</div>
@@ -475,7 +475,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-amber-900/30 border border-amber-500/20 flex items-center justify-center">
                       <User className="w-5 h-5 text-amber-400" />
                     </div>
-                    <span className="text-xs sm:text-sm text-slate-400">Your Events</span>
+                    <span className="text-xs sm:text-sm text-slate-500">Your Events</span>
                   </div>
                   <div className="text-3xl font-black text-white">{yourEventsCount}</div>
                   <div className="text-[10px] text-slate-500 mt-1">posted by you</div>
@@ -486,7 +486,7 @@ export default function AdminDashboard() {
                     <div className="w-10 h-10 rounded-xl bg-green-900/30 border border-green-500/20 flex items-center justify-center">
                       <FileText className="w-5 h-5 text-green-400" />
                     </div>
-                    <span className="text-xs sm:text-sm text-slate-400">Your News</span>
+                    <span className="text-xs sm:text-sm text-slate-500">Your News</span>
                   </div>
                   <div className="text-3xl font-black text-white">{yourNewsCount}</div>
                   <div className="text-[10px] text-slate-500 mt-1">posted by you</div>
@@ -500,7 +500,7 @@ export default function AdminDashboard() {
                     <CalendarPlus className="w-6 h-6 text-purple-400" />
                   </div>
                   <h3 className="font-bold text-white text-lg mb-1">Create Event</h3>
-                  <p className="text-sm text-slate-400">Add a new event visible to all users on the platform.</p>
+                  <p className="text-sm text-slate-500">Add a new event visible to all users on the platform.</p>
                 </button>
 
                 <button onClick={() => setPage('add-news')} className="glass rounded-xl p-6 text-left hover:border-pink-500/40 transition group relative overflow-hidden">
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
                     <FilePlus className="w-6 h-6 text-pink-400" />
                   </div>
                   <h3 className="font-bold text-white text-lg mb-1">Publish News</h3>
-                  <p className="text-sm text-slate-400">Share the latest news and updates with your community.</p>
+                  <p className="text-sm text-slate-500">Share the latest news and updates with your community.</p>
                 </button>
               </div>
 
@@ -524,7 +524,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="space-y-3">
                     {recentItems.slice(0, 8).map(item => (
-                      <div key={item._id} className="flex items-center gap-4 py-3 border-b border-[#2A2A4A]/60 last:border-0">
+                      <div key={item._id} className="flex items-center gap-4 py-3 border-b border-slate-200/50 last:border-0">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           item._type === 'event' ? 'bg-purple-900/30 text-purple-400' : 'bg-pink-900/30 text-pink-400'
                         }`}>
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
           {/* ======================== ADD EVENT ======================== */}
           {page === 'add-event' && (
             <div className="max-w-2xl">
-              <button onClick={() => setPage('dashboard')} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4 transition group">
+              <button onClick={() => setPage('dashboard')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-white mb-4 transition group">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
               </button>
               
@@ -570,7 +570,7 @@ export default function AdminDashboard() {
                 <form onSubmit={submitEvent} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Event Title <span className="text-red-400">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Event Title <span className="text-red-400">*</span></label>
                       <input 
                         type="text" 
                         value={eventForm.title}
@@ -582,7 +582,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Date <span className="text-red-400">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Date <span className="text-red-400">*</span></label>
                       <input 
                         type="date" 
                         value={eventForm.date}
@@ -593,7 +593,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Time</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Time</label>
                       <input 
                         type="time" 
                         value={eventForm.time}
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Location</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Location</label>
                       <input 
                         type="text" 
                         value={eventForm.location}
@@ -614,7 +614,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Category</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Category</label>
                       <select 
                         value={eventForm.category}
                         onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Description <span class="text-red-400">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Description <span class="text-red-400">*</span></label>
                       <textarea 
                         value={eventForm.description}
                         onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
@@ -645,12 +645,12 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Photo <span className="text-slate-600 normal-case font-normal">(optional — click or drag from your device)</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Photo <span className="text-slate-600 normal-case font-normal">(optional — click or drag from your device)</span></label>
                       
                       {/* Drag-Drop Zone */}
                       <div 
                         className={`relative border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
-                          eventDrag ? 'border-purple-500 bg-purple-900/10' : 'border-[#2A2A4A] hover:border-purple-600/50'
+                          eventDrag ? 'border-purple-500 bg-purple-900/10' : 'border-slate-200 hover:border-purple-600/50'
                         }`}
                         onClick={() => eventFileInputRef.current.click()}
                         onDragOver={(e) => { e.preventDefault(); setEventDrag(true); }}
@@ -697,7 +697,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tags <span className="text-slate-600 normal-case font-normal">(type and press Enter or comma)</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tags <span className="text-slate-600 normal-case font-normal">(type and press Enter or comma)</span></label>
                       <div className="tag-input-container" onClick={() => eventTagInputRef.current.focus()}>
                         {eventForm.tags.map((tag, i) => (
                           <span key={tag} className="tag-pill">
@@ -733,7 +733,7 @@ export default function AdminDashboard() {
                       <span>{submitLoading.event ? 'Publishing...' : 'Publish Event'}</span>
                     </button>
                     
-                    <button type="button" onClick={resetEventForm} className="px-4 py-2.5 rounded-xl border border-[#2A2A4A] text-slate-400 hover:text-white hover:border-slate-600 text-sm transition">
+                    <button type="button" onClick={resetEventForm} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-white hover:border-slate-600 text-sm transition">
                       Reset
                     </button>
                   </div>
@@ -745,7 +745,7 @@ export default function AdminDashboard() {
           {/* ======================== ADD NEWS ======================== */}
           {page === 'add-news' && (
             <div className="max-w-2xl">
-              <button onClick={() => setPage('dashboard')} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-4 transition group">
+              <button onClick={() => setPage('dashboard')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-white mb-4 transition group">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
               </button>
               
@@ -763,7 +763,7 @@ export default function AdminDashboard() {
                 <form onSubmit={submitNews} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">News Title <span class="text-red-400">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">News Title <span class="text-red-400">*</span></label>
                       <input 
                         type="text" 
                         value={newsForm.title}
@@ -775,7 +775,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Category</label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Category</label>
                       <select 
                         value={newsForm.category}
                         onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value })}
@@ -794,12 +794,12 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Photo <span className="text-slate-600 normal-case font-normal">(optional — click or drag from your device)</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Photo <span className="text-slate-600 normal-case font-normal">(optional — click or drag from your device)</span></label>
                       
                       {/* Drag-Drop Zone */}
                       <div 
                         className={`relative border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
-                          newsDrag ? 'border-pink-500 bg-pink-900/10' : 'border-[#2A2A4A] hover:border-pink-500/50'
+                          newsDrag ? 'border-pink-500 bg-pink-900/10' : 'border-slate-200 hover:border-pink-500/50'
                         }`}
                         onClick={() => newsFileInputRef.current.click()}
                         onDragOver={(e) => { e.preventDefault(); setNewsDrag(true); }}
@@ -846,7 +846,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Summary <span className="text-slate-600 normal-case font-normal">(optional — short card preview)</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Summary <span className="text-slate-600 normal-case font-normal">(optional — short card preview)</span></label>
                       <input 
                         type="text" 
                         value={newsForm.summary}
@@ -857,7 +857,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Full Content <span class="text-red-400">*</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Full Content <span class="text-red-400">*</span></label>
                       <textarea 
                         value={newsForm.content}
                         onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })}
@@ -869,7 +869,7 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tags <span className="text-slate-600 normal-case font-normal">(type and press Enter or comma)</span></label>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tags <span className="text-slate-600 normal-case font-normal">(type and press Enter or comma)</span></label>
                       <div className="tag-input-container" onClick={() => newsTagInputRef.current.focus()}>
                         {newsForm.tags.map((tag, i) => (
                           <span key={tag} className="tag-pill">
@@ -905,7 +905,7 @@ export default function AdminDashboard() {
                       <span>{submitLoading.news ? 'Publishing...' : 'Publish Article'}</span>
                     </button>
                     
-                    <button type="button" onClick={resetNewsForm} className="px-4 py-2.5 rounded-xl border border-[#2A2A4A] text-slate-400 hover:text-white hover:border-slate-600 text-sm transition">
+                    <button type="button" onClick={resetNewsForm} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-white hover:border-slate-600 text-sm transition">
                       Reset
                     </button>
                   </div>
@@ -920,19 +920,19 @@ export default function AdminDashboard() {
               {/* Filter tabs */}
               <div className="flex items-center gap-2">
                 <button onClick={() => setPostsFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  postsFilter === 'all' ? 'bg-purple-600 text-white' : 'text-slate-400 border border-[#2A2A4A] hover:border-purple-600/50'
+                  postsFilter === 'all' ? 'bg-purple-600 text-white' : 'text-slate-500 border border-slate-200 hover:border-purple-600/50'
                 }`}>
                   All ({events.length + news.length})
                 </button>
                 
                 <button onClick={() => setPostsFilter('events')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  postsFilter === 'events' ? 'bg-purple-600 text-white' : 'text-slate-400 border border-[#2A2A4A] hover:border-purple-600/50'
+                  postsFilter === 'events' ? 'bg-purple-600 text-white' : 'text-slate-500 border border-slate-200 hover:border-purple-600/50'
                 }`}>
                   Events ({events.length})
                 </button>
                 
                 <button onClick={() => setPostsFilter('news')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  postsFilter === 'news' ? 'bg-pink-600 text-white' : 'text-slate-400 border border-[#2A2A4A] hover:border-pink-500/50'
+                  postsFilter === 'news' ? 'bg-pink-600 text-white' : 'text-slate-500 border border-slate-200 hover:border-pink-500/50'
                 }`}>
                   News ({news.length})
                 </button>
@@ -941,7 +941,7 @@ export default function AdminDashboard() {
               {/* Events Manager Grid */}
               {(postsFilter === 'all' || postsFilter === 'events') && (
                 <div className="glass rounded-2xl overflow-hidden border border-purple-500/10">
-                  <div className="p-5 border-b border-[#2A2A4A]/60 flex items-center gap-2">
+                  <div className="p-5 border-b border-slate-200/50 flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-purple-400" />
                     <h2 className="font-bold text-white">Events</h2>
                     <span className="text-xs bg-purple-900/30 text-purple-300 border border-purple-500/20 px-2.5 py-0.5 rounded-full ml-auto">
@@ -952,7 +952,7 @@ export default function AdminDashboard() {
                   {events.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 text-sm">No events yet.</div>
                   ) : (
-                    <div className="divide-y divide-[#2A2A4A]/50 bg-[#16162A]/10">
+                    <div className="divide-y divide-slate-200/50 bg-slate-100/50">
                       {events.map(ev => (
                         <div key={ev._id} className="p-4 sm:p-5 hover:bg-white/[0.01] transition">
                           <div className="flex items-start gap-4">
@@ -969,7 +969,7 @@ export default function AdminDashboard() {
                                 <h3 className="font-semibold text-white text-sm truncate">{ev.title}</h3>
                                 <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full">{ev.category}</span>
                               </div>
-                              <p className="text-xs text-slate-400 line-clamp-1 mb-2">{ev.description}</p>
+                              <p className="text-xs text-slate-500 line-clamp-1 mb-2">{ev.description}</p>
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500 font-medium">
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(ev.date)}</span>
                                 {ev.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {ev.location}</span>}
@@ -995,7 +995,7 @@ export default function AdminDashboard() {
               {/* News Manager Grid */}
               {(postsFilter === 'all' || postsFilter === 'news') && (
                 <div className="glass rounded-2xl overflow-hidden border border-pink-500/10">
-                  <div className="p-5 border-b border-[#2A2A4A]/60 flex items-center gap-2">
+                  <div className="p-5 border-b border-slate-200/50 flex items-center gap-2">
                     <Newspaper className="w-5 h-5 text-pink-400" />
                     <h2 className="font-bold text-white">News Articles</h2>
                     <span className="text-xs bg-pink-900/30 text-pink-300 border border-pink-500/20 px-2.5 py-0.5 rounded-full ml-auto">
@@ -1006,7 +1006,7 @@ export default function AdminDashboard() {
                   {news.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 text-sm">No news articles yet.</div>
                   ) : (
-                    <div className="divide-y divide-[#2A2A4A]/50 bg-[#16162A]/10">
+                    <div className="divide-y divide-slate-200/50 bg-slate-100/50">
                       {news.map(item => (
                         <div key={item._id} className="p-4 sm:p-5 hover:bg-white/[0.01] transition">
                           <div className="flex items-start gap-4">
@@ -1023,7 +1023,7 @@ export default function AdminDashboard() {
                                 <h3 className="font-semibold text-white text-sm truncate">{item.title}</h3>
                                 <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full">{item.category}</span>
                               </div>
-                              <p className="text-xs text-slate-400 line-clamp-1 mb-2">{item.summary || item.content}</p>
+                              <p className="text-xs text-slate-500 line-clamp-1 mb-2">{item.summary || item.content}</p>
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500 font-medium">
                                 <span className="flex items-center gap-1"><User className="w-3 h-3" /> {item.adminName}</span>
                                 <span>{timeAgo(item.createdAt)}</span>
@@ -1068,14 +1068,14 @@ export default function AdminDashboard() {
             <h3 className="font-bold text-white text-lg text-center mb-2">
               Delete <span className="capitalize">{deleteModal.type}</span>?
             </h3>
-            <p className="text-slate-400 text-sm text-center mb-6">
+            <p className="text-slate-500 text-sm text-center mb-6">
               This action cannot be undone. The item and all its comments will be permanently removed.
             </p>
             
             <div className="flex gap-3">
               <button 
                 onClick={() => setDeleteModal({ open: false, type: '', id: '', loading: false })}
-                className="flex-grow px-4 py-2.5 rounded-xl border border-[#2A2A4A] text-slate-400 hover:text-white text-sm transition"
+                className="flex-grow px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-white text-sm transition"
               >
                 Cancel
               </button>
@@ -1095,3 +1095,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

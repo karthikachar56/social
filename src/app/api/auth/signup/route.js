@@ -54,3 +54,4 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Server error during signup.' }, { status: 500 });
   }
 }
+

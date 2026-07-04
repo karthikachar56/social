@@ -82,24 +82,24 @@ export default function AdminLoginPage() {
             <Zap className="w-12 h-12 text-white fill-white" />
           </div>
           <h1 className="text-4xl font-black mb-3 gradient-text">EventHub Admin</h1>
-          <p className="text-slate-400 text-lg max-w-sm">Manage events and news. Keep your community informed and engaged.</p>
+          <p className="text-slate-500 text-lg max-w-sm">Manage events and news. Keep your community informed and engaged.</p>
         </div>
         
         {/* Features */}
         <div className="relative mt-12 space-y-3 w-full max-w-xs text-sm">
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-slate-500">
             <div className="w-8 h-8 rounded-lg bg-purple-900/50 border border-purple-700/50 flex items-center justify-center flex-shrink-0">
               <CalendarPlus className="w-4 h-4 text-purple-400" />
             </div>
             <span>Create and manage events with full details</span>
           </div>
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-slate-500">
             <div className="w-8 h-8 rounded-lg bg-pink-900/50 border border-pink-700/50 flex items-center justify-center flex-shrink-0">
               <Newspaper className="w-4 h-4 text-pink-400" />
             </div>
             <span>Publish news articles visible to all users</span>
           </div>
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-slate-500">
             <div className="w-8 h-8 rounded-lg bg-amber-900/50 border border-amber-700/50 flex items-center justify-center flex-shrink-0">
               <Users className="w-4 h-4 text-amber-400" />
             </div>
@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
       </div>
 
       {/* RIGHT PANEL - LOGIN FORM */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-[#0F0F1A]">
+      <div className="flex-1 flex items-center justify-center p-6 bg-slate-50">
         <div className="w-full max-w-md">
 
           {/* Mobile Logo */}
@@ -122,7 +122,7 @@ export default function AdminLoginPage() {
 
           <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
             <h2 className="text-2xl font-bold text-white mb-1 font-sans">Welcome back</h2>
-            <p className="text-slate-400 text-sm mb-6 font-sans">Sign in to your admin account</p>
+            <p className="text-slate-500 text-sm mb-6 font-sans">Sign in to your admin account</p>
 
             {/* Error Message */}
             {error && (
@@ -134,7 +134,7 @@ export default function AdminLoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input 
@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input 
@@ -185,21 +185,21 @@ export default function AdminLoginPage() {
             </form>
 
             {/* Quick Login Credentials */}
-            <div className="mt-8 pt-6 border-t border-[#2A2A4A]/50">
+            <div className="mt-8 pt-6 border-t border-slate-200/50">
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Quick Login — Demo Admins</p>
               <div className="grid grid-cols-2 gap-2">
                 {demoAdmins.map(admin => (
                   <button 
                     key={admin.email}
                     onClick={() => quickLogin(admin)} 
-                    className="text-left px-3 py-2 rounded-lg border border-[#2A2A4A] hover:border-purple-600 hover:bg-purple-900/10 transition group"
+                    className="text-left px-3 py-2 rounded-lg border border-slate-200 hover:border-purple-600 hover:bg-purple-900/10 transition group"
                   >
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
                         {admin.name[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-300 truncate group-hover:text-white transition">{admin.name}</p>
+                        <p className="text-[10px] font-semibold text-slate-600 truncate group-hover:text-white transition">{admin.name}</p>
                         <p className="text-[9px] text-slate-600 truncate">{admin.email}</p>
                       </div>
                     </div>
@@ -222,3 +222,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+

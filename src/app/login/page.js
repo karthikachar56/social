@@ -60,7 +60,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0F0F1A]">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
       <div className="w-full max-w-md">
         
         {/* Logo */}
@@ -76,7 +76,7 @@ export default function LoginPage() {
 
         <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-1">Welcome Back</h2>
-          <p className="text-slate-400 text-sm mb-6">Sign in to join the conversation</p>
+          <p className="text-slate-500 text-sm mb-6">Sign in to join the conversation</p>
 
           {/* Success Message */}
           {justRegistered && !error && (
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -111,7 +111,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -148,15 +148,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[#2A2A4A]/50 text-center text-xs space-y-2">
-            <p className="text-slate-400">
+          <div className="mt-6 pt-6 border-t border-slate-200/50 text-center text-xs space-y-2">
+            <p className="text-slate-500">
               Don't have an account?{' '}
               <Link href="/register" className="text-purple-400 hover:text-purple-300 font-semibold underline">
                 Sign Up
               </Link>
             </p>
             <p>
-              <Link href="/admin/login" className="text-slate-500 hover:text-slate-300 font-medium">
+              <Link href="/admin/login" className="text-slate-500 hover:text-slate-600 font-medium">
                 Are you an administrator? Login here
               </Link>
             </p>
@@ -173,3 +173,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

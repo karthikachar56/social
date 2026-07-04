@@ -57,7 +57,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0F0F1A]">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
       <div className="w-full max-w-md">
         
         {/* Logo */}
@@ -73,7 +73,7 @@ export default function RegisterPage() {
 
         <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-1">Create Account</h2>
-          <p className="text-slate-400 text-sm mb-6">Register to participate and write comments</p>
+          <p className="text-slate-500 text-sm mb-6">Register to participate and write comments</p>
 
           {/* Error Message */}
           {error && (
@@ -85,7 +85,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Your Name</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Your Name</label>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -100,7 +100,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -115,7 +115,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -137,7 +137,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Confirm Password</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Confirm Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input 
@@ -167,8 +167,8 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[#2A2A4A]/50 text-center text-xs">
-            <p className="text-slate-400">
+          <div className="mt-6 pt-6 border-t border-slate-200/50 text-center text-xs">
+            <p className="text-slate-500">
               Already have an account?{' '}
               <Link href="/login" className="text-purple-400 hover:text-purple-300 font-semibold underline">
                 Sign In
@@ -187,3 +187,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

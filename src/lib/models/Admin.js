@@ -32,3 +32,4 @@ export async function seedAdmins() {
 }
 
 export default Admin;
+

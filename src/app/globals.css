@@ -1,56 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0F0F1A;
-  --foreground: #E2E8F0;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
   --font-sans: var(--font-sans);
 }
 
 @theme {
-  --color-brand: #7C3AED;
-  --color-brand-light: #8B5CF6;
-  --color-brand-dark: #6D28D9;
-  --color-surface: #0F0F1A;
-  --color-surface-card: #16162A;
-  --color-surface-border: #2A2A4A;
+  --color-brand: #2563EB;
+  --color-brand-light: #3B82F6;
+  --color-brand-dark: #1D4ED8;
+  --color-surface: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-surface-border: #E2E8F0;
 }
 
 body {
-  background: #0F0F1A;
-  color: #E2E8F0;
+  background: #F8FAFC;
+  color: #0F172A;
 }
 
-/* Glassmorphism Styles */
+/* Glassmorphism Styles (Light Mode) */
 .glass {
-  background: rgba(22, 22, 42, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.1);
 }
 
 .card-hover {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #7C3AED, #EC4899, #F59E0B);
+  background: linear-gradient(135deg, #2563EB, #4F46E5, #06B6D4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .hero-bg {
-  background: radial-gradient(ellipse at 60% 0%, rgba(124, 58, 237, 0.25) 0%, transparent 60%),
-              radial-gradient(ellipse at 10% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
-              #0F0F1A;
+  background: radial-gradient(ellipse at 60% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 10% 80%, rgba(79, 70, 229, 0.04) 0%, transparent 50%),
+              #FFFFFF;
 }
 
 .tab-active {
-  background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  background: linear-gradient(135deg, #2563EB, #3B82F6);
   color: white;
 }
 
@@ -64,21 +64,21 @@ body {
 }
 
 .badge-event {
-  background: rgba(124, 58, 237, 0.2);
-  color: #A78BFA;
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1D4ED8;
+  border: 1px solid rgba(37, 99, 235, 0.18);
 }
 
 .badge-news {
-  background: rgba(236, 72, 153, 0.2);
-  color: #F9A8D4;
-  border: 1px solid rgba(236, 72, 153, 0.3);
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338CA;
+  border: 1px solid rgba(79, 70, 229, 0.18);
 }
 
 .badge-cat {
-  background: rgba(245, 158, 11, 0.15);
-  color: #FCD34D;
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(14, 165, 233, 0.08);
+  color: #0369A1;
+  border: 1px solid rgba(14, 165, 233, 0.18);
 }
 
 /* Custom Scrollbars */
@@ -88,11 +88,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F0F1A;
+  background: #F8FAFC;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #7C3AED;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 
@@ -113,7 +113,7 @@ body {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #1e1e35 25%, #2a2a4a 50%, #1e1e35 75%);
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -161,7 +161,7 @@ body {
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .action-btn.liked {
@@ -178,9 +178,9 @@ body {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(22, 22, 42, 0.95);
-  border: 1px solid rgba(124, 58, 237, 0.4);
-  color: #A78BFA;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  color: #1D4ED8;
   padding: 10px 20px;
   border-radius: 10px;
   font-size: 13px;
@@ -188,12 +188,13 @@ body {
   z-index: 9999;
   transition: opacity 0.3s;
   pointer-events: none;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 /* Sidebar Custom Layout */
 .sidebar {
-  background: rgba(16, 16, 28, 0.98);
-  border-right: 1px solid rgba(42, 42, 74, 0.7);
+  background: #FFFFFF;
+  border-right: 1px solid #E2E8F0;
 }
 
 .nav-item {
@@ -204,41 +205,41 @@ body {
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: #94A3B8;
+  color: #64748B;
   transition: all 0.2s;
   cursor: pointer;
 }
 
 .nav-item:hover {
-  background: rgba(124, 58, 237, 0.1);
-  color: white;
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563EB;
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(139, 92, 246, 0.2));
-  color: white;
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.05));
+  color: #1D4ED8;
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 .input-field {
   width: 100%;
   padding: 10px 14px;
-  background: rgba(15, 15, 26, 0.8);
-  border: 1px solid rgba(42, 42, 74, 0.8);
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
   border-radius: 10px;
-  color: white;
+  color: #0F172A;
   font-size: 14px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }
 
 .input-field:focus {
-  border-color: #7C3AED;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .input-field::placeholder {
-  color: #475569;
+  color: #94A3B8;
 }
 
 textarea.input-field {
@@ -247,7 +248,7 @@ textarea.input-field {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  background: linear-gradient(135deg, #2563EB, #3B82F6);
   color: white;
   font-weight: 600;
   border-radius: 10px;
@@ -259,9 +260,9 @@ textarea.input-field {
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.95;
   transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.2);
 }
 
 .btn-primary:disabled {
@@ -270,9 +271,9 @@ textarea.input-field {
 }
 
 .btn-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: #FCA5A5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.18);
   font-weight: 600;
   border-radius: 8px;
   padding: 6px 12px;
@@ -284,29 +285,31 @@ textarea.input-field {
 }
 
 .btn-danger:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.18);
 }
 
 .stat-card {
-  background: rgba(22, 22, 42, 0.6);
-  border: 1px solid rgba(42, 42, 74, 0.7);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 14px;
   padding: 20px;
   transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .stat-card:hover {
-  border-color: rgba(124, 58, 237, 0.4);
+  border-color: rgba(37, 99, 235, 0.3);
   transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .select-field {
   width: 100%;
   padding: 10px 14px;
-  background: rgba(15, 15, 26, 0.8);
-  border: 1px solid rgba(42, 42, 74, 0.8);
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
   border-radius: 10px;
-  color: white;
+  color: #0F172A;
   font-size: 14px;
   transition: border-color 0.2s;
   outline: none;
@@ -315,7 +318,7 @@ textarea.input-field {
 }
 
 .select-field:focus {
-  border-color: #7C3AED;
+  border-color: #2563EB;
 }
 
 .tag-input-container {
@@ -323,8 +326,8 @@ textarea.input-field {
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px;
-  background: rgba(15, 15, 26, 0.8);
-  border: 1px solid rgba(42, 42, 74, 0.8);
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
   border-radius: 10px;
   transition: border-color 0.2s;
   min-height: 46px;
@@ -333,14 +336,14 @@ textarea.input-field {
 }
 
 .tag-input-container:focus-within {
-  border-color: #7C3AED;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .tag-pill {
-  background: rgba(124, 58, 237, 0.2);
-  color: #A78BFA;
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1D4ED8;
+  border: 1px solid rgba(37, 99, 235, 0.2);
   padding: 2px 8px 2px 10px;
   border-radius: 99px;
   font-size: 12px;
@@ -363,6 +366,7 @@ textarea.input-field {
   align-items: center;
   gap: 10px;
   animation: slide-in 0.3s ease forwards;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
 }
 
 @keyframes slide-in {
@@ -377,13 +381,13 @@ textarea.input-field {
 }
 
 .toast-success {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6EE7B7;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #065F46;
 }
 
 .toast-error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #991B1B;
 }
