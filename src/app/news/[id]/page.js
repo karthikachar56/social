@@ -361,13 +361,13 @@ export default function NewsDetailPage() {
             ) : (
               comments.map((comment, index) => (
                 <div key={comment._id} className={`flex gap-3 pt-4 ${index === 0 ? 'pt-0 border-0' : ''}`}>
-                  <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-200 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-semibold uppercase">
+                  <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center text-slate-600 text-xs font-semibold uppercase">
                     {comment.authorName ? comment.authorName[0] : 'U'}
                   </div>
                   
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-slate-200">{comment.authorName}</span>
+                      <span className="font-semibold text-sm text-slate-800">{comment.authorName}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-500 font-medium">{timeAgo(comment.createdAt)}</span>
                         {user && (user.role === 'admin' || user.id === comment.authorId) && (

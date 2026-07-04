@@ -43,6 +43,62 @@ export default function Home() {
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  // Modal Comments States
+  const [modalComments, setModalComments] = useState([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [commentSending, setCommentSending] = useState(false);
+
+  // Load comments when detail modal is opened
+  useEffect(() => {
+    if (modal.open && modal.data._id) {
+      fetchModalComments(modal.data._id);
+    }
+  }, [modal.open, modal.data._id]);
+
+  const fetchModalComments = async (postId) => {
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setModalComments(data);
+      }
+    } catch (e) {
+      console.error('Fetch modal comments error:', e);
+    }
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!commentInput.trim() || commentSending) return;
+
+    const content = commentInput.trim();
+    setCommentInput('');
+    setCommentSending(true);
+
+    try {
+      const res = await fetch(`/api/posts/${modal.data._id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content,
+          postType: modal.type
+        })
+      });
+
+      if (res.ok) {
+        const newComm = await res.json();
+        setModalComments(prev => [newComm, ...prev]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCommentSending(false);
+    }
+  };
+
   const fetchNotifications = async () => {
     try {
       const res = await fetch('/api/notifications', {
@@ -844,6 +900,52 @@ export default function Home() {
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div className="pt-6 border-t border-slate-200/50 space-y-4">
+                <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
+                  Comments
+                  <span className="text-[10px] font-normal bg-purple-900/10 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-full">
+                    {modalComments.length}
+                  </span>
+                </h3>
+
+                {/* Add Comment Input Form */}
+                <form onSubmit={handleAddComment} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="input-field text-xs flex-grow"
+                    disabled={commentSending}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!commentInput.trim() || commentSending}
+                    className="btn-primary px-4 py-2 rounded-xl text-xs flex items-center justify-center flex-shrink-0"
+                  >
+                    {commentSending ? 'Post...' : 'Post'}
+                  </button>
+                </form>
+
+                {/* Comments List */}
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {modalComments.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">No comments yet. Be the first to start the conversation!</p>
+                  ) : (
+                    modalComments.map(c => (
+                      <div key={c._id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span className="font-semibold text-slate-700">{c.authorName}</span>
+                          <span>{timeAgo(c.createdAt)}</span>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-normal">{c.content}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
