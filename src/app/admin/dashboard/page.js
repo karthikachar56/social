@@ -52,6 +52,7 @@ export default function AdminDashboard() {
   const [chatSending, setChatSending] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [activeRecipient, setActiveRecipient] = useState(null); // null means group chat
+  const [unreadChats, setUnreadChats] = useState([]);
   const chatBottomRef = useRef(null);
 
   // Chat Polling Effect
@@ -66,6 +67,18 @@ export default function AdminDashboard() {
     };
   }, [page, token, activeRecipient]);
 
+  // Global Unread Chats Polling Effect
+  useEffect(() => {
+    let interval;
+    if (token && role === 'admin') {
+      fetchUnreadChats();
+      interval = setInterval(fetchUnreadChats, 6000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [token, role, page, activeRecipient]);
+
   // Clear messages on switching chat targets
   useEffect(() => {
     setChatMessages([]);
@@ -78,6 +91,22 @@ export default function AdminDashboard() {
     }
   }, [chatMessages, page]);
 
+  const fetchUnreadChats = async () => {
+    try {
+      const res = await fetch('/api/admin/chat/unread', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadChats(data);
+      }
+    } catch (e) {
+      console.error('Fetch unread chats error:', e);
+    }
+  };
+
   const fetchChatMessages = async () => {
     try {
       const targetId = activeRecipient ? activeRecipient._id : 'group';
@@ -89,6 +118,8 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         setChatMessages(data);
+        // Instantly refresh unread counts since fetching marked messages as read
+        fetchUnreadChats();
       }
     } catch (e) {
       console.error('Fetch chat error:', e);
@@ -169,7 +200,7 @@ export default function AdminDashboard() {
   const loadAllData = async () => {
     setLoadingData(true);
     try {
-      const [evRes, nwRes, usrRes, admRes] = await Promise.all([
+      const [evRes, nwRes, usrRes, admRes, unrRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/news'),
         fetch('/api/admin/users', {
@@ -178,6 +209,11 @@ export default function AdminDashboard() {
           }
         }),
         fetch('/api/admin/list', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }),
+        fetch('/api/admin/chat/unread', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -204,6 +240,11 @@ export default function AdminDashboard() {
       if (admRes && admRes.ok) {
         const admData = await admRes.json();
         setAdmins(admData);
+      }
+
+      if (unrRes && unrRes.ok) {
+        const unrData = await unrRes.json();
+        setUnreadChats(unrData);
       }
     } catch (e) {
       console.error(e);
@@ -562,6 +603,11 @@ export default function AdminDashboard() {
 
           <button onClick={() => { setPage('chat'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'chat' ? 'active' : ''}`}>
             <MessageSquare className="w-4 h-4 flex-shrink-0" /> Admin Chat
+            {new Set(unreadChats.map(m => m.senderId)).size > 0 && (
+              <span className="ml-auto text-[10px] bg-red-600 text-white font-bold border border-red-500 px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                {new Set(unreadChats.map(m => m.senderId)).size}
+              </span>
+            )}
           </button>
         </nav>
 
@@ -1350,6 +1396,13 @@ export default function AdminDashboard() {
                                 {adm.email}
                               </p>
                             </div>
+                            {unreadChats.filter(m => m.senderId === adm._id).length > 0 && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                isActive ? 'bg-white text-purple-600' : 'bg-red-600 text-white'
+                              }`}>
+                                {unreadChats.filter(m => m.senderId === adm._id).length}
+                              </span>
+                            )}
                           </button>
                         );
                       })}

@@ -16,6 +16,12 @@ export async function GET(req) {
 
     let query = {};
     if (recipientId && recipientId !== 'group') {
+      // Mark all messages from recipientId to me as read
+      await ChatMessage.updateMany(
+        { senderId: recipientId, recipientId: decoded.id, read: false },
+        { read: true }
+      );
+
       // Fetch private messages between current admin and recipientId
       query = {
         $or: [

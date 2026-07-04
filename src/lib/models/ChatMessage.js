@@ -6,6 +6,7 @@ const ChatMessageSchema = new mongoose.Schema({
   recipientId:   { type: String, default: null }, // If null, this is global admin group chat
   recipientName: { type: String, default: null },
   text:          { type: String, required: true },
+  read:          { type: Boolean, default: false }, // Tracks if recipient has viewed the message
   createdAt:     { type: Date, default: Date.now }
 });
 
