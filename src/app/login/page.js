@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +14,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [justRegistered, setJustRegistered] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('registered') === 'true') {
+        setJustRegistered(true);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,6 +77,14 @@ export default function LoginPage() {
         <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
           <h2 className="text-2xl font-bold text-white mb-1">Welcome Back</h2>
           <p className="text-slate-400 text-sm mb-6">Sign in to join the conversation</p>
+
+          {/* Success Message */}
+          {justRegistered && !error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-green-950/20 border border-green-500/30 text-green-300 text-xs flex items-center gap-2">
+              <Zap className="w-4 h-4 flex-shrink-0 text-green-400 fill-green-400/20" />
+              <span>Registration successful! Please sign in using your new credentials.</span>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

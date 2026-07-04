@@ -48,9 +48,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Log in in AuthContext
-      signup(data.token, data.role, data.user);
-      router.push('/');
+      // Redirect to login page for manual login
+      router.push('/login?registered=true');
     } catch (err) {
       setError('A network error occurred. Please try again.');
       setLoading(false);
