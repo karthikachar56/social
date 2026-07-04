@@ -11,6 +11,10 @@ const inter = Inter({
 export const metadata = {
   title: "EventHub — Events & News",
   description: "Stay updated with the latest events and news from EventHub.",
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({ children }) {
