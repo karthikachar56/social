@@ -1055,7 +1055,7 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="border-t border-slate-200/50 mt-20 py-10 text-center text-slate-500 text-xs sm:text-sm bg-slate-100/50 space-y-2">
+      <footer className="border-t border-slate-200/50 mt-20 pt-10 pb-20 text-center text-slate-500 text-xs sm:text-sm bg-slate-100/50 space-y-2">
         <div className="flex items-center justify-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/10">
             <Zap className="w-3 h-3 text-white fill-white" />
