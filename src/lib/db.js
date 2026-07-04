@@ -1,11 +1,8 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventhub';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/eventhub';
 
-if (!MONGO_URI) {
-  throw new Error('Please define the MONGO_URI environment variable inside .env');
-}
-
+console.log('Environment check - MONGO_URI present:', !!process.env.MONGO_URI, '| MONGODB_URI present:', !!process.env.MONGODB_URI);
 console.log('Database connection target:', MONGO_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local Host Fallback');
 
 /**
