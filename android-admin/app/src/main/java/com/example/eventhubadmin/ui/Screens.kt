@@ -637,6 +637,64 @@ fun ManagePostsTab() {
     var loading by remember { mutableStateOf(events.isEmpty() && newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
 
+    var editingPost by remember { mutableStateOf<JSONObject?>(null) }
+    var editingPostType by remember { mutableStateOf("Event") }
+
+    var editTitle by remember { mutableStateOf("") }
+    var editDescription by remember { mutableStateOf("") }
+    var editDate by remember { mutableStateOf("") }
+    var editTime by remember { mutableStateOf("") }
+    var editLocation by remember { mutableStateOf("") }
+    var editCategory by remember { mutableStateOf("") }
+    var editImage by remember { mutableStateOf("") }
+    var editTagsInput by remember { mutableStateOf("") }
+    var editLoading by remember { mutableStateOf(false) }
+    var editMsg by remember { mutableStateOf("") }
+    var editUploadLoading by remember { mutableStateOf(false) }
+
+    val editGalleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    editUploadLoading = true
+                    val base64 = uriToCompressedBase64(context, uri)
+                    val cloudUrl = EventHubApi.uploadPhoto(token, base64)
+                    editImage = cloudUrl
+                    android.widget.Toast.makeText(context, "Cover photo uploaded! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    editMsg = e.message ?: "Failed to upload cover photo"
+                } finally {
+                    editUploadLoading = false
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(editingPost) {
+        if (editingPost != null) {
+            val post = editingPost!!
+            editTitle = post.getString("title")
+            editDescription = post.optString("description", post.optString("content", ""))
+            editDate = post.optString("date", "")
+            editTime = post.optString("time", "")
+            editLocation = post.optString("location", post.optString("summary", ""))
+            editCategory = post.getString("category")
+            editImage = post.optString("image", "")
+            
+            val tagsArr = post.optJSONArray("tags")
+            val tList = mutableListOf<String>()
+            if (tagsArr != null) {
+                for (i in 0 until tagsArr.length()) {
+                    tList.add(tagsArr.getString(i))
+                }
+            }
+            editTagsInput = tList.joinToString(", ")
+            editMsg = ""
+        }
+    }
+
     val fetchPosts = {
         scope.launch {
             try {
@@ -692,13 +750,20 @@ fun ManagePostsTab() {
                 item {
                     Text("No events published yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
                 }
-            } else {
+             } else {
                 items(events) { ev ->
                     AdminPostCard(
                         title = ev.getString("title"),
                         category = ev.getString("category"),
                         type = "Event",
                         likes = ev.optInt("likes", 0),
+                        downloads = ev.optInt("downloads", 0),
+                        shares = ev.optInt("shares", 0),
+                        comments = ev.optInt("commentsCount", 0),
+                        onEdit = {
+                            editingPostType = "Event"
+                            editingPost = ev
+                        },
                         onDelete = {
                             scope.launch {
                                 try {
@@ -728,6 +793,13 @@ fun ManagePostsTab() {
                         category = ns.getString("category"),
                         type = "News",
                         likes = ns.optInt("likes", 0),
+                        downloads = ns.optInt("downloads", 0),
+                        shares = ns.optInt("shares", 0),
+                        comments = ns.optInt("commentsCount", 0),
+                        onEdit = {
+                            editingPostType = "News"
+                            editingPost = ns
+                        },
                         onDelete = {
                             scope.launch {
                                 try {
@@ -743,6 +815,250 @@ fun ManagePostsTab() {
             }
         }
     }
+
+    if (editingPost != null) {
+        AlertDialog(
+            onDismissRequest = { editingPost = null },
+            title = {
+                Text(
+                    text = "Edit ${editingPostType}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F172A)
+                )
+            },
+            text = {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (editMsg.isNotEmpty()) {
+                        Text(
+                            editMsg,
+                            color = Color(0xFFDC2626),
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFEF2F2))
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text(if (editingPostType == "Event") "Description" else "Content") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3
+                    )
+
+                    if (editingPostType == "Event") {
+                        OutlinedTextField(
+                            value = editDate,
+                            onValueChange = { editDate = it },
+                            label = { Text("Date (e.g. 2026-07-20)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editTime,
+                            onValueChange = { editTime = it },
+                            label = { Text("Time (optional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = editLocation,
+                            onValueChange = { editLocation = it },
+                            label = { Text("Location (optional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        OutlinedTextField(
+                            value = editLocation,
+                            onValueChange = { editLocation = it },
+                            label = { Text("Summary (optional)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = editCategory,
+                        onValueChange = { editCategory = it },
+                        label = { Text("Category") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = editTagsInput,
+                        onValueChange = { editTagsInput = it },
+                        label = { Text("Tags (comma separated)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Cover Image Selection & Upload Area
+                    Text("Cover Image", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF1F5F9))
+                            .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (editImage.isNotEmpty()) {
+                            val imgModel = formatImageUrl(editImage)
+                            if (imgModel is ByteArray) {
+                                val bitmap = remember(imgModel) {
+                                    android.graphics.BitmapFactory.decodeByteArray(imgModel, 0, imgModel.size)
+                                }
+                                if (bitmap != null) {
+                                    AsyncImage(
+                                        model = bitmap,
+                                        contentDescription = "Cover Image Preview",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                            } else {
+                                AsyncImage(
+                                    model = imgModel,
+                                    contentDescription = "Cover Image Preview",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            // Clear Image Button
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(6.dp)
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .clickable { editImage = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear Image", tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
+                        } else {
+                            Text("No cover image selected", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { editGalleryLauncher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth().height(38.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !editUploadLoading
+                        ) {
+                            if (editUploadLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
+                            } else {
+                                Icon(Icons.Default.Add, contentDescription = "Upload", modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Upload Cover Photo", fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = editImage,
+                        onValueChange = { editImage = it },
+                        label = { Text("Or paste image URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editTitle.isBlank() || editDescription.isBlank() || (editingPostType == "Event" && editDate.isBlank())) {
+                            editMsg = "Title and Content/Description are required."
+                            return@Button
+                        }
+                        scope.launch {
+                            try {
+                                editLoading = true
+                                val tagList = editTagsInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                if (editingPostType == "Event") {
+                                    EventHubApi.editEvent(
+                                        token = token,
+                                        id = editingPost!!.getString("_id"),
+                                        title = editTitle.trim(),
+                                        description = editDescription.trim(),
+                                        date = editDate.trim(),
+                                        time = editTime.trim().ifEmpty { null },
+                                        location = editLocation.trim().ifEmpty { null },
+                                        category = editCategory.trim(),
+                                        image = editImage.ifEmpty { null },
+                                        tags = tagList
+                                    )
+                                } else {
+                                    EventHubApi.editNews(
+                                        token = token,
+                                        id = editingPost!!.getString("_id"),
+                                        title = editTitle.trim(),
+                                        content = editDescription.trim(),
+                                        summary = editLocation.trim().ifEmpty { null },
+                                        category = editCategory.trim(),
+                                        image = editImage.ifEmpty { null },
+                                        tags = tagList
+                                    )
+                                }
+                                android.widget.Toast.makeText(context, "Post updated successfully! 🎉", android.widget.Toast.LENGTH_SHORT).show()
+                                editingPost = null
+                                fetchPosts()
+                            } catch (e: Exception) {
+                                editMsg = e.message ?: "Failed to save changes"
+                            } finally {
+                                editLoading = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                    enabled = !editLoading
+                ) {
+                    if (editLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp))
+                    } else {
+                        Text("Save Changes")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingPost = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun IndicatorLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        Spacer(modifier = Modifier.width(3.dp))
+        Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+    }
 }
 
 @Composable
@@ -751,6 +1067,10 @@ fun AdminPostCard(
     category: String,
     type: String,
     likes: Int,
+    downloads: Int,
+    shares: Int,
+    comments: Int,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -781,14 +1101,32 @@ fun AdminPostCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("$likes Likes", fontSize = 11.sp, color = Color.Gray)
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IndicatorLabel(Icons.Default.Favorite, "$likes", Color(0xFFDB2777))
+                    IndicatorLabel(Icons.Default.ArrowDownward, "$downloads", Color(0xFF4F46E5))
+                    IndicatorLabel(Icons.Default.Share, "$shares", Color(0xFF059669))
+                    IndicatorLabel(Icons.AutoMirrored.Filled.Comment, "$comments", Color(0xFFD97706))
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
-            IconButton(
-                onClick = onDelete,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFDC2626))
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onEdit,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFF6366F1))
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+                IconButton(
+                    onClick = onDelete,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFDC2626))
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
             }
         }
     }
