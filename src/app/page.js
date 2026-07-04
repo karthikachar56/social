@@ -1005,15 +1005,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-200/50 mt-20 py-10 text-center text-slate-500 text-xs sm:text-sm bg-slate-100/50">
-        <div className="flex items-center justify-center gap-2 mb-2">
+      <footer className="border-t border-slate-200/50 mt-20 py-10 text-center text-slate-500 text-xs sm:text-sm bg-slate-100/50 space-y-2">
+        <div className="flex items-center justify-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-md shadow-purple-500/10">
             <Zap className="w-3 h-3 text-white fill-white" />
           </div>
           <span className="font-semibold text-slate-500">EventHub</span>
         </div>
-        <p>© 2024 EventHub. Powered by our team of admins.</p>
+        <p className="font-medium text-slate-600">EETIRP PVT LTD © {new Date().getFullYear()}</p>
+        <p>
+          Contact Support: <a href="mailto:eetirpltd@gmail.com" className="text-purple-600 hover:text-purple-800 transition font-medium">eetirpltd@gmail.com</a>
+        </p>
       </footer>
 
       {/* Profile Modal */}
