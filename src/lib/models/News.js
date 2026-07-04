@@ -8,6 +8,8 @@ const NewsSchema = new mongoose.Schema({
   image:     { type: String, default: '' },
   tags:      [String],
   likes:     { type: Number, default: 0 },
+  shares:    { type: Number, default: 0 },
+  downloads: { type: Number, default: 0 },
   adminName: { type: String, required: true },
   adminId:   { type: String, required: true },
   createdAt: { type: Date, default: Date.now }

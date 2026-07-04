@@ -1178,6 +1178,13 @@ export default function AdminDashboard() {
                                 <span className="flex items-center gap-1"><User className="w-3 h-3" /> {ev.adminName}</span>
                                 <span>{timeAgo(ev.createdAt)}</span>
                               </div>
+
+                              <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500 border-t border-slate-200/40 pt-1.5 w-max">
+                                <span className="text-rose-500">❤️ {ev.likes || 0} Likes</span>
+                                <span className="text-purple-500">💬 {ev.commentsCount || 0} Comments</span>
+                                <span className="text-emerald-500">🔗 {ev.shares || 0} Shares</span>
+                                <span className="text-blue-500">📥 {ev.downloads || 0} Downloads</span>
+                              </div>
                             </div>
                             
                             <button 
@@ -1229,6 +1236,13 @@ export default function AdminDashboard() {
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500 font-medium">
                                 <span className="flex items-center gap-1"><User className="w-3 h-3" /> {item.adminName}</span>
                                 <span>{timeAgo(item.createdAt)}</span>
+                              </div>
+
+                              <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500 border-t border-slate-200/40 pt-1.5 w-max">
+                                <span className="text-rose-500">❤️ {item.likes || 0} Likes</span>
+                                <span className="text-purple-500">💬 {item.commentsCount || 0} Comments</span>
+                                <span className="text-emerald-500">🔗 {item.shares || 0} Shares</span>
+                                <span className="text-blue-500">📥 {item.downloads || 0} Downloads</span>
                               </div>
                             </div>
                             

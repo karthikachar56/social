@@ -6,8 +6,15 @@ import { verifyToken } from '@/lib/auth';
 export async function GET() {
   try {
     await connectDB();
-    const news = await News.find().sort({ createdAt: -1 });
-    return NextResponse.json(news);
+    const news = await News.find().sort({ createdAt: -1 }).lean();
+    
+    const Comment = (await import('@/lib/models/Comment')).default;
+    const newsWithComments = await Promise.all(news.map(async (nw) => {
+      const commentsCount = await Comment.countDocuments({ postId: nw._id });
+      return { ...nw, commentsCount };
+    }));
+
+    return NextResponse.json(newsWithComments);
   } catch (error) {
     console.error('Fetch news error:', error);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

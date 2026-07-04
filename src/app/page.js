@@ -287,6 +287,13 @@ export default function Home() {
 
   const downloadPost = (item, e) => {
     if (e) e.stopPropagation();
+    const itemType = item.date ? 'event' : 'news';
+    fetch(`/api/posts/${item._id}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'download', postType: itemType })
+    }).catch(err => console.error('Track download error:', err));
+
     if (item.image) {
       const a = document.createElement('a');
       a.href = item.image;
@@ -311,7 +318,14 @@ export default function Home() {
 
   const sharePost = async (item, e) => {
     if (e) e.stopPropagation();
-    const url = window.location.origin + '/' + (modal.type || 'events') + '/' + item._id;
+    const itemType = item.date ? 'event' : 'news';
+    fetch(`/api/posts/${item._id}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'share', postType: itemType })
+    }).catch(err => console.error('Track share error:', err));
+
+    const url = window.location.origin + '/' + (modal.type || itemType) + '/' + item._id;
     const shareData = {
       title: item.title,
       text: (item.summary || item.description || item.content || '').slice(0, 120) + '...',
