@@ -779,62 +779,62 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="stat-card">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-900/30 border border-purple-200 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-purple-400" />
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-purple-600" />
                     </div>
                     <span className="text-xs sm:text-sm text-slate-500">Total Events</span>
                   </div>
-                  <div className="text-3xl font-black text-white">{events.length}</div>
+                  <div className="text-3xl font-black text-slate-900">{events.length}</div>
                   <div className="text-[10px] text-slate-500 mt-1">all admins</div>
                 </div>
 
                 <div className="stat-card">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-pink-900/30 border border-pink-500/20 flex items-center justify-center">
-                      <Newspaper className="w-5 h-5 text-pink-400" />
+                    <div className="w-10 h-10 rounded-xl bg-pink-50 border border-pink-100 flex items-center justify-center">
+                      <Newspaper className="w-5 h-5 text-pink-600" />
                     </div>
                     <span className="text-xs sm:text-sm text-slate-500">Total News</span>
                   </div>
-                  <div className="text-3xl font-black text-white">{news.length}</div>
+                  <div className="text-3xl font-black text-slate-900">{news.length}</div>
                   <div className="text-[10px] text-slate-500 mt-1">all admins</div>
                 </div>
 
                 <div className="stat-card">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-900/30 border border-amber-500/20 flex items-center justify-center">
-                      <User className="w-5 h-5 text-amber-400" />
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-amber-600" />
                     </div>
                     <span className="text-xs sm:text-sm text-slate-500">Your Events</span>
                   </div>
-                  <div className="text-3xl font-black text-white">{yourEventsCount}</div>
+                  <div className="text-3xl font-black text-slate-900">{yourEventsCount}</div>
                   <div className="text-[10px] text-slate-500 mt-1">posted by you</div>
                 </div>
 
                 <div className="stat-card">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-green-900/30 border border-green-500/20 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-green-400" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-emerald-600" />
                     </div>
                     <span className="text-xs sm:text-sm text-slate-500">Your News</span>
                   </div>
-                  <div className="text-3xl font-black text-white">{yourNewsCount}</div>
+                  <div className="text-3xl font-black text-slate-900">{yourNewsCount}</div>
                   <div className="text-[10px] text-slate-500 mt-1">posted by you</div>
                 </div>
               </div>
 
               {/* Quick Actions */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button onClick={() => setPage('add-event')} className="glass rounded-xl p-6 text-left hover:border-purple-500/40 transition group relative overflow-hidden">
-                  <div className="w-12 h-12 rounded-xl bg-purple-900/30 flex items-center justify-center mb-4 group-hover:bg-purple-900/50 transition">
-                    <CalendarPlus className="w-6 h-6 text-purple-400" />
+                <button onClick={() => setPage('add-event')} className="glass rounded-xl p-6 text-left hover:border-purple-500/40 transition group relative overflow-hidden bg-white border border-slate-200">
+                  <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-4 group-hover:bg-purple-100 transition border border-purple-100">
+                    <CalendarPlus className="w-6 h-6 text-purple-600" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-lg mb-1">Create Event</h3>
                   <p className="text-sm text-slate-500">Add a new event visible to all users on the platform.</p>
                 </button>
 
-                <button onClick={() => setPage('add-news')} className="glass rounded-xl p-6 text-left hover:border-pink-500/40 transition group relative overflow-hidden">
-                  <div className="w-12 h-12 rounded-xl bg-pink-900/30 flex items-center justify-center mb-4 group-hover:bg-pink-900/50 transition">
-                    <FilePlus className="w-6 h-6 text-pink-400" />
+                <button onClick={() => setPage('add-news')} className="glass rounded-xl p-6 text-left hover:border-pink-500/40 transition group relative overflow-hidden bg-white border border-slate-200">
+                  <div className="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center mb-4 group-hover:bg-pink-100 transition border border-pink-100">
+                    <FilePlus className="w-6 h-6 text-pink-600" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-lg mb-1">Publish News</h3>
                   <p className="text-sm text-slate-500">Share the latest news and updates with your community.</p>
@@ -854,14 +854,14 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     {recentItems.slice(0, 8).map(item => (
                       <div key={item._id} className="flex items-center gap-4 py-3 border-b border-slate-200/50 last:border-0">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          item._type === 'event' ? 'bg-purple-900/30 text-purple-400' : 'bg-pink-900/30 text-pink-400'
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border ${
+                          item._type === 'event' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-pink-50 text-pink-600 border-pink-100'
                         }`}>
                           {item._type === 'event' ? <Calendar className="w-4.5 h-4.5" /> : <Newspaper className="w-4.5 h-4.5" />}
                         </div>
                         
                         <div className="flex-grow min-w-0">
-                          <p className="font-semibold text-white text-sm truncate">{item.title}</p>
+                          <p className="font-semibold text-slate-900 text-sm truncate">{item.title}</p>
                           <p className="text-[11px] text-slate-500">{item.adminName} • {timeAgo(item.createdAt)}</p>
                         </div>
                         
