@@ -201,7 +201,7 @@ export default function NewsDetailPage() {
     );
   }
 
-  if (loading) {
+  if (loading || !news) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <svg className="w-8 h-8 animate-spin text-purple-500" fill="none" viewBox="0 0 24 24">

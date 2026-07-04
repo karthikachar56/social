@@ -25,7 +25,8 @@ import {
   AlertCircle,
   CheckCircle,
   Eye,
-  FileText
+  FileText,
+  MapPin
 } from 'lucide-react';
 
 export default function AdminDashboard() {
