@@ -38,6 +38,41 @@ export async function POST(req, { params }) {
     });
 
     await newComment.save();
+
+    // Notify the admin about the comment
+    try {
+      let postTitle = 'your post';
+      let targetAdminId = null;
+      if (postType === 'event') {
+        const Event = (await import('@/lib/models/Event')).default;
+        const event = await Event.findById(id);
+        if (event) {
+          postTitle = `"${event.title}"`;
+          targetAdminId = event.adminId;
+        }
+      } else {
+        const News = (await import('@/lib/models/News')).default;
+        const news = await News.findById(id);
+        if (news) {
+          postTitle = `"${news.title}"`;
+          targetAdminId = news.adminId;
+        }
+      }
+
+      if (targetAdminId && targetAdminId !== decoded.id) {
+        const Notification = (await import('@/lib/models/Notification')).default;
+        await new Notification({
+          userId: targetAdminId,
+          title: 'New Comment',
+          message: `${decoded.name} commented on your post ${postTitle}`,
+          type: 'comment',
+          link: `/${postType}s/${id}`
+        }).save();
+      }
+    } catch (err) {
+      console.error('Failed to create notification for comment:', err);
+    }
+
     return NextResponse.json(newComment, { status: 201 });
   } catch (error) {
     console.error('Create comment error:', error);

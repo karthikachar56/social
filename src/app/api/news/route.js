@@ -39,6 +39,20 @@ export async function POST(req) {
     });
 
     await newNews.save();
+
+    // Create a global notification
+    try {
+      const Notification = (await import('@/lib/models/Notification')).default;
+      await new Notification({
+        title: `New Article: ${newNews.title}`,
+        message: `${decoded.name} published a new news article in ${newNews.category}`,
+        type: 'news',
+        link: `/news/${newNews._id}`
+      }).save();
+    } catch (err) {
+      console.error('Failed to create notification:', err);
+    }
+
     return NextResponse.json(newNews, { status: 201 });
   } catch (error) {
     console.error('Create news error:', error);

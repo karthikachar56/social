@@ -41,6 +41,20 @@ export async function POST(req) {
     });
 
     await newEvent.save();
+
+    // Create a global notification
+    try {
+      const Notification = (await import('@/lib/models/Notification')).default;
+      await new Notification({
+        title: `New Event: ${newEvent.title}`,
+        message: `${decoded.name} published a new event in ${newEvent.category}`,
+        type: 'event',
+        link: `/events/${newEvent._id}`
+      }).save();
+    } catch (err) {
+      console.error('Failed to create notification:', err);
+    }
+
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     console.error('Create event error:', error);

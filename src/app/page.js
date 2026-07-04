@@ -19,7 +19,9 @@ import {
   Sliders,
   CalendarX,
   LayoutDashboard,
-  KeyRound
+  KeyRound,
+  Bell,
+  CheckCheck
 } from 'lucide-react';
 
 export default function Home() {
@@ -36,6 +38,76 @@ export default function Home() {
   const [modal, setModal] = useState({ open: false, type: '', data: {} });
   const [stats, setStats] = useState({ admins: 6, events: 0, news: 0 });
   const [showToast, setShowToast] = useState(false);
+
+  // Notifications States
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (e) {
+      console.error('Fetch notifications error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
+  const handleMarkAsRead = async (notification) => {
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ id: notification._id })
+      });
+      
+      const myId = user?.id || user?._id;
+      setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, readBy: [...(n.readBy || []), myId] } : n));
+      
+      if (notification.link) {
+        router.push(notification.link);
+      }
+      setNotificationsOpen(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ markAll: true })
+      });
+      if (res.ok) {
+        const myId = user?.id || user?._id;
+        setNotifications(prev => prev.map(n => ({ ...n, readBy: [...new Set([...(n.readBy || []), myId])] })));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // User Profile States
   const [profileOpen, setProfileOpen] = useState(false);
@@ -233,6 +305,11 @@ export default function Home() {
     );
   }
 
+  const myUserId = user?.id || user?._id;
+  const unreadNotificationsCount = notifications.filter(n => {
+    return !n.readBy || !n.readBy.includes(myUserId);
+  }).length;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-purple-600/40">
       
@@ -250,7 +327,69 @@ export default function Home() {
             {!authLoading && (
               <>
                 {user ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 relative">
+                    {/* Notification Bell Icon */}
+                    <div className="relative">
+                      <button 
+                        onClick={() => setNotificationsOpen(!notificationsOpen)}
+                        className={`p-2 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-slate-100 transition relative ${notificationsOpen ? 'bg-slate-100 text-purple-600' : ''}`}
+                        title="Notifications"
+                      >
+                        <Bell className="w-4 h-4" />
+                        {unreadNotificationsCount > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                        )}
+                        {unreadNotificationsCount > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                        )}
+                      </button>
+
+                      {/* Dropdown Card */}
+                      {notificationsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+                          <div className="absolute right-0 mt-2 w-80 glass border border-purple-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-fade-in">
+                            <div className="p-4 border-b border-slate-200/50 flex items-center justify-between bg-purple-50/50">
+                              <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">Notifications</span>
+                              {unreadNotificationsCount > 0 && (
+                                <button 
+                                  onClick={handleMarkAllAsRead}
+                                  className="text-[10px] text-purple-600 hover:text-purple-800 font-bold flex items-center gap-1 transition"
+                                >
+                                  <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="max-h-72 overflow-y-auto divide-y divide-slate-200/50">
+                              {notifications.length === 0 ? (
+                                <div className="p-6 text-center text-xs text-slate-500">No notifications yet.</div>
+                              ) : (
+                                notifications.map(notif => {
+                                  const isRead = notif.readBy && notif.readBy.includes(myUserId);
+                                  return (
+                                    <button
+                                      key={notif._id}
+                                      onClick={() => handleMarkAsRead(notif)}
+                                      className={`w-full text-left p-3.5 transition flex flex-col gap-1 ${
+                                        isRead ? 'bg-transparent hover:bg-slate-100/50' : 'bg-purple-900/10 hover:bg-purple-900/20'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="font-semibold text-xs text-slate-800">{notif.title}</span>
+                                        <span className="text-[9px] text-slate-500">{timeAgo(notif.createdAt)}</span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-600 leading-normal">{notif.message}</p>
+                                    </button>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
                     <button 
                       onClick={() => setProfileOpen(true)}
                       className="flex items-center gap-3 hover:opacity-80 transition text-left focus:outline-none cursor-pointer"
