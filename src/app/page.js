@@ -25,7 +25,9 @@ import {
   MessageSquare,
   Camera,
   Phone,
-  Lock
+  Lock,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 
 export default function Home() {
@@ -176,6 +178,8 @@ export default function Home() {
   const [profileMsg, setProfileMsg] = useState({ show: false, msg: '', type: 'success' });
   const profileFileInputRef = useRef(null);
   const [profileUploading, setProfileUploading] = useState(false);
+  const [profileTab, setProfileTab] = useState('details'); // 'details' or 'saved'
+  const [savedSubTab, setSavedSubTab] = useState('events'); // 'events' or 'news'
 
   useEffect(() => {
     if (user) {
@@ -255,6 +259,43 @@ export default function Home() {
     } finally {
       setProfileUpdating(false);
     }
+  };
+
+  const handleToggleSavePost = async (postId, postType, e) => {
+    e?.stopPropagation();
+    if (!token) {
+      alert('You must be logged in to save posts.');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/posts/${postId}/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ postType })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        updateUser(data.user);
+      } else {
+        const errData = await res.json();
+        console.error('Failed to toggle save:', errData.error);
+      }
+    } catch (err) {
+      console.error('Network error toggling save:', err);
+    }
+  };
+
+  const isPostSaved = (postId, postType) => {
+    if (!user) return false;
+    const savedList = postType === 'event' ? user.savedEvents : user.savedNews;
+    if (!savedList) return false;
+    return savedList.some(item => {
+      const id = typeof item === 'string' ? item : (item._id || item.id);
+      return id === postId;
+    });
   };
 
   useEffect(() => {
@@ -771,6 +812,21 @@ export default function Home() {
                           <button className="action-btn text-slate-500 hover:text-green-400" onClick={(e) => sharePost(ev, e)} title="Share link">
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
+
+                          {/* Save */}
+                          {role === 'user' && (
+                            <button 
+                              className={`action-btn ${isPostSaved(ev._id, 'event') ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-amber-400'}`}
+                              onClick={(e) => handleToggleSavePost(ev._id, 'event', e)}
+                              title={isPostSaved(ev._id, 'event') ? "Unsave Event" : "Save Event"}
+                            >
+                              {isPostSaved(ev._id, 'event') ? (
+                                <BookmarkCheck className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Bookmark className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -862,6 +918,21 @@ export default function Home() {
                           <button className="action-btn text-slate-500 hover:text-green-400" onClick={(e) => sharePost(item, e)} title="Share link">
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
+
+                          {/* Save */}
+                          {role === 'user' && (
+                            <button 
+                              className={`action-btn ${isPostSaved(item._id, 'news') ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-amber-400'}`}
+                              onClick={(e) => handleToggleSavePost(item._id, 'news', e)}
+                              title={isPostSaved(item._id, 'news') ? "Unsave News" : "Save News"}
+                            >
+                              {isPostSaved(item._id, 'news') ? (
+                                <BookmarkCheck className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Bookmark className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -986,6 +1057,22 @@ export default function Home() {
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
+
+                  {role === 'user' && (
+                    <button 
+                      className={`action-btn border border-slate-200 px-3.5 py-2 rounded-xl transition ${
+                        isPostSaved(modal.data._id, modal.type) ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-amber-400'
+                      }`}
+                      onClick={(e) => handleToggleSavePost(modal.data._id, modal.type, e)}
+                      title={isPostSaved(modal.data._id, modal.type) ? "Unsave Post" : "Save Post"}
+                    >
+                      {isPostSaved(modal.data._id, modal.type) ? (
+                        <BookmarkCheck className="w-4 h-4 fill-current" />
+                      ) : (
+                        <Bookmark className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1135,8 +1222,37 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Tab Selector */}
+              {role === 'user' && (
+                <div className="flex border-b border-slate-200 gap-4 mb-4">
+                  <button 
+                    type="button"
+                    onClick={() => setProfileTab('details')}
+                    className={`flex-1 pb-2.5 text-sm font-bold transition border-b-2 text-center ${
+                      profileTab === 'details' 
+                        ? 'border-purple-600 text-purple-600' 
+                        : 'border-transparent text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    Edit Details
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setProfileTab('saved')}
+                    className={`flex-1 pb-2.5 text-sm font-bold transition border-b-2 text-center ${
+                      profileTab === 'saved' 
+                        ? 'border-purple-600 text-purple-655' 
+                        : 'border-transparent text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    Saved Posts
+                  </button>
+                </div>
+              )}
+
               {/* Edit Form */}
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
+              {(role !== 'user' || profileTab === 'details') && (
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
                 {profileMsg.show && (
                   <div className={`px-4 py-2.5 rounded-xl text-xs font-semibold border ${
                     profileMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
@@ -1210,16 +1326,126 @@ export default function Home() {
                   ) : 'Save Changes'}
                 </button>
               </form>
+              )}
+
+              {/* Saved Items lists */}
+              {role === 'user' && profileTab === 'saved' && (
+                <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                  {/* Saved Sub-Tabs */}
+                  <div className="flex border-b border-slate-100 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setSavedSubTab('events')}
+                      className={`flex-1 pb-2 text-xs font-bold uppercase tracking-wider transition ${
+                        savedSubTab === 'events' ? 'border-b-2 border-purple-550 text-purple-650' : 'text-slate-400 hover:text-slate-655'
+                      }`}
+                    >
+                      Events ({user.savedEvents?.length || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSavedSubTab('news')}
+                      className={`flex-1 pb-2 text-xs font-bold uppercase tracking-wider transition ${
+                        savedSubTab === 'news' ? 'border-b-2 border-pink-550 text-pink-650' : 'text-slate-400 hover:text-slate-655'
+                      }`}
+                    >
+                      News ({user.savedNews?.length || 0})
+                    </button>
+                  </div>
+
+                  {savedSubTab === 'events' ? (
+                    <div className="space-y-2.5">
+                      {(!user.savedEvents || user.savedEvents.length === 0) ? (
+                        <p className="text-center text-xs text-slate-400 py-6">No saved events yet.</p>
+                      ) : (
+                        user.savedEvents.map(ev => {
+                          const evId = ev._id || ev.id;
+                          return (
+                            <div 
+                              key={evId} 
+                              onClick={() => { setProfileOpen(false); openModal(ev, 'event'); }}
+                              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-purple-50/50 border border-slate-150 transition cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                {ev.image ? (
+                                  <img src={ev.image} alt={ev.title} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <Calendar className="w-5 h-5 text-purple-650" />
+                                  </div>
+                                )}
+                                <div className="text-left overflow-hidden">
+                                  <p className="text-xs font-bold text-slate-800 truncate">{ev.title}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{ev.location || 'Virtual'}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleSavePost(evId, 'event', e)}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-200/50 rounded-lg transition flex-shrink-0"
+                                title="Unsave"
+                              >
+                                <BookmarkCheck className="w-4 h-4 text-amber-500" />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {(!user.savedNews || user.savedNews.length === 0) ? (
+                        <p className="text-center text-xs text-slate-400 py-6">No saved articles yet.</p>
+                      ) : (
+                        user.savedNews.map(ns => {
+                          const nsId = ns._id || ns.id;
+                          return (
+                            <div 
+                              key={nsId} 
+                              onClick={() => { setProfileOpen(false); openModal(ns, 'news'); }}
+                              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-pink-50/50 border border-slate-150 transition cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                {ns.image ? (
+                                  <img src={ns.image} alt={ns.title} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                                    <Newspaper className="w-5 h-5 text-pink-650" />
+                                  </div>
+                                )}
+                                <div className="text-left overflow-hidden">
+                                  <p className="text-xs font-bold text-slate-800 truncate">{ns.title}</p>
+                                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{ns.category || 'General'}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleSavePost(nsId, 'news', e)}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-slate-200/50 rounded-lg transition flex-shrink-0"
+                                title="Unsave"
+                              >
+                                <BookmarkCheck className="w-4 h-4 text-amber-500" />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Change Password Link */}
-              <div className="pt-4 text-center border-t border-slate-200/60">
-                <Link 
-                  href="/change-password"
-                  className="inline-flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-850 font-semibold transition"
-                >
-                  <KeyRound className="w-3.5 h-3.5" /> Change Account Password
-                </Link>
-              </div>
+              {(role !== 'user' || profileTab === 'details') && (
+                <div className="pt-4 text-center border-t border-slate-200/60">
+                  <Link 
+                    href="/change-password"
+                    className="inline-flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-850 font-semibold transition"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" /> Change Account Password
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

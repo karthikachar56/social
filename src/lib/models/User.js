@@ -7,6 +7,8 @@ const UserSchema = new mongoose.Schema({
   avatar:    { type: String, default: '' },
   phone:     { type: String, default: '' },
   banned:    { type: Boolean, default: false },
+  savedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
+  savedNews:   [{ type: mongoose.Schema.Types.ObjectId, ref: 'News' }],
   createdAt: { type: Date, default: Date.now }
 });
 

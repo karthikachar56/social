@@ -1,8 +1,12 @@
 package com.example.eventhubuser.data
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,9 +25,11 @@ object EventHubApi {
     private const val KEY_USER_EMAIL = "user_email"
     private const val KEY_USER_PHONE = "user_phone"
     private const val KEY_USER_AVATAR = "user_avatar"
+    private const val KEY_SAVED_EVENTS = "user_saved_events"
+    private const val KEY_SAVED_NEWS = "user_saved_news"
 
     // SharedPreferences access
-    fun saveSession(context: Context, token: String, id: String, name: String, email: String, phone: String?, avatar: String?) {
+    fun saveSession(context: Context, token: String, id: String, name: String, email: String, phone: String?, avatar: String?, savedEventsJson: String? = null, savedNewsJson: String? = null) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString(KEY_TOKEN, token)
@@ -32,6 +38,8 @@ object EventHubApi {
             putString(KEY_USER_EMAIL, email)
             putString(KEY_USER_PHONE, phone ?: "")
             putString(KEY_USER_AVATAR, avatar ?: "")
+            putString(KEY_SAVED_EVENTS, savedEventsJson ?: "[]")
+            putString(KEY_SAVED_NEWS, savedNewsJson ?: "[]")
             apply()
         }
     }
@@ -48,7 +56,9 @@ object EventHubApi {
             name = prefs.getString(KEY_USER_NAME, "") ?: "",
             email = prefs.getString(KEY_USER_EMAIL, "") ?: "",
             phone = prefs.getString(KEY_USER_PHONE, "") ?: "",
-            avatar = prefs.getString(KEY_USER_AVATAR, "") ?: ""
+            avatar = prefs.getString(KEY_USER_AVATAR, "") ?: "",
+            savedEventsJson = prefs.getString(KEY_SAVED_EVENTS, "[]") ?: "[]",
+            savedNewsJson = prefs.getString(KEY_SAVED_NEWS, "[]") ?: "[]"
         )
     }
 
@@ -219,11 +229,19 @@ object EventHubApi {
         return JSONArray(apiRequest("/api/posts/$postId/comments", "GET"))
     }
 
-    suspend fun postComment(token: String, postId: String, text: String): JSONObject {
+    suspend fun postComment(token: String, postId: String, text: String, postType: String): JSONObject {
         val body = JSONObject().apply {
             put("content", text)
+            put("postType", postType)
         }
         return JSONObject(apiRequest("/api/posts/$postId/comments", "POST", body, token))
+    }
+
+    suspend fun toggleSavePost(token: String, postId: String, postType: String): JSONObject {
+        val body = JSONObject().apply {
+            put("postType", postType)
+        }
+        return JSONObject(apiRequest("/api/posts/$postId/save", "POST", body, token))
     }
 
     // Notifications
@@ -250,12 +268,111 @@ object EventHubApi {
         return JSONObject(apiRequest("/api/posts/$postId/track", "POST", body, token))
     }
 
-    // Permission-free Android file download helper
-    fun downloadPostLocally(context: Context, title: String, content: String): String {
-        val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
-        val file = File(dir, "${title.replace("\\s+".toRegex(), "_")}.txt")
-        file.writeText(content)
-        return file.absolutePath
+    // Helper to save files to the public shared Downloads folder
+    private fun saveFileToPublicDownloads(
+        context: Context,
+        filename: String,
+        mimeType: String,
+        writeBlock: (OutputStream) -> Unit
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            if (uri != null) {
+                try {
+                    resolver.openOutputStream(uri)?.use { outputStream ->
+                        writeBlock(outputStream)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } else {
+            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, filename)
+            try {
+                FileOutputStream(file).use { outputStream ->
+                    writeBlock(outputStream)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // Permission-free Android file download helper that saves to public Downloads directory
+    suspend fun downloadPostLocally(context: Context, title: String, content: String, imageUrl: String? = null): String = withContext(Dispatchers.IO) {
+        val sanitizedTitle = title.replace("\\s+".toRegex(), "_")
+        
+        // Write text details to public Downloads
+        saveFileToPublicDownloads(context, "$sanitizedTitle.txt", "text/plain") { output ->
+            output.write(content.toByteArray(Charsets.UTF_8))
+        }
+        
+        if (!imageUrl.isNullOrBlank()) {
+            try {
+                if (imageUrl.startsWith("data:image/") && imageUrl.contains(";base64,")) {
+                    val base64String = imageUrl.substringAfter(";base64,")
+                    val imageBytes = Base64.decode(base64String, Base64.DEFAULT)
+                    val ext = if (imageUrl.contains("image/png")) "png" else "jpg"
+                    val mime = if (imageUrl.contains("image/png")) "image/png" else "image/jpeg"
+                    saveFileToPublicDownloads(context, "${sanitizedTitle}_image.$ext", mime) { output ->
+                        output.write(imageBytes)
+                    }
+                } else {
+                    val fullUrl = if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+                        imageUrl
+                    } else {
+                        val cleanUrl = if (imageUrl.startsWith("/")) imageUrl else "/$imageUrl"
+                        "$BASE_URL$cleanUrl"
+                    }
+                    val url = URL(fullUrl)
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 15000
+                    conn.requestMethod = "GET"
+                    val responseCode = conn.responseCode
+                    if (responseCode in 200..299) {
+                        val contentType = conn.contentType ?: ""
+                        val ext = if (contentType.contains("png")) "png" else "jpg"
+                        val mime = if (contentType.contains("png")) "image/png" else "image/jpeg"
+                        saveFileToPublicDownloads(context, "${sanitizedTitle}_image.$ext", mime) { output ->
+                            conn.inputStream.use { input ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        "Downloads/$sanitizedTitle.txt"
+    }
+
+    // Resolves relative URLs to absolute HTTP/HTTPS URLs or decodes Base64 data URLs
+    fun formatImageUrl(url: String): Any? {
+        if (url.isBlank()) return ""
+        if (url.startsWith("data:image/") && url.contains(";base64,")) {
+            return try {
+                val base64String = url.substringAfter(";base64,")
+                Base64.decode(base64String, Base64.DEFAULT)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+            return url
+        }
+        val cleanUrl = if (url.startsWith("/")) url else "/$url"
+        return "$BASE_URL$cleanUrl"
     }
 }
 
@@ -264,5 +381,7 @@ data class UserProfile(
     val name: String,
     val email: String,
     val phone: String,
-    val avatar: String
+    val avatar: String,
+    val savedEventsJson: String = "[]",
+    val savedNewsJson: String = "[]"
 )

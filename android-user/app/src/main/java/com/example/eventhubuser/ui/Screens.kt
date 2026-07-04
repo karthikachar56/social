@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -152,7 +153,9 @@ fun LoginScreen(
                                         errorMsg = "Access denied. Use Admin app for Administrator login."
                                     } else {
                                         val id = userObj.getString("id")
-                                        EventHubApi.saveSession(context, token, id, name, email, phone, avatar)
+                                        val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                        val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+                                        EventHubApi.saveSession(context, token, id, name, email, phone, avatar, savedEvs, savedNws)
                                         onLoginSuccess()
                                     }
                                 } catch (e: Exception) {
@@ -302,7 +305,9 @@ fun RegisterScreen(
                                     val avatar = userObj.optString("avatar", "")
 
                                     val id = userObj.getString("id")
-                                    EventHubApi.saveSession(context, token, id, savedName, email.trim(), phone, avatar)
+                                    val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                    val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+                                    EventHubApi.saveSession(context, token, id, savedName, email.trim(), phone, avatar, savedEvs, savedNws)
                                     onRegisterSuccess()
                                 } catch (e: Exception) {
                                     errorMsg = e.message ?: "Registration failed."
@@ -513,6 +518,8 @@ fun ProfileSetupScreen(
                                     val savedAvatar = userObj.getString("avatar")
 
                                     val id = userObj.getString("id")
+                                    val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                    val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
                                     EventHubApi.saveSession(
                                         context,
                                         token,
@@ -520,7 +527,9 @@ fun ProfileSetupScreen(
                                         savedName,
                                         user.email,
                                         savedPhone,
-                                        savedAvatar
+                                        savedAvatar,
+                                        savedEvs,
+                                        savedNws
                                     )
                                     onSetupComplete()
                                 } catch (e: Exception) {
@@ -602,7 +611,7 @@ fun DashboardScreen(
                 0 -> EventsTab(onNavigateToEventDetail)
                 1 -> NewsTab(onNavigateToNewsDetail)
                 2 -> AlertsTab()
-                3 -> ProfileTab(onLogout)
+                3 -> ProfileTab(onNavigateToEventDetail, onNavigateToNewsDetail, onLogout)
             }
         }
     }
@@ -733,7 +742,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
             val imgUrl = event.optString("image", "")
             if (imgUrl.isNotEmpty()) {
                 AsyncImage(
-                    model = imgUrl,
+                    model = EventHubApi.formatImageUrl(imgUrl),
                     contentDescription = "Event Cover",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -855,7 +864,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Default.Comment,
                                 contentDescription = "Comments",
                                 tint = Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
@@ -873,7 +882,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                                         EventHubApi.trackPostAction(token, eventId, "download", "event")
                                     } catch (e: Exception) {}
                                     val detailsStr = "Title: $title\nCategory: $category\nDescription: $description\nPosted by: $adminName"
-                                    EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                    EventHubApi.downloadPostLocally(context, title, detailsStr, imgUrl)
                                     android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
@@ -910,6 +919,52 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
                                 tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        val res = EventHubApi.toggleSavePost(token, eventId, "event")
+                                        val updatedUser = res.getJSONObject("user")
+                                        val savedEvs = updatedUser.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                        val savedNws = updatedUser.optJSONArray("savedNews")?.toString() ?: "[]"
+                                        val curUser = EventHubApi.getSessionUser(context)
+                                        EventHubApi.saveSession(
+                                            context, token, curUser.id, curUser.name, curUser.email, curUser.phone, curUser.avatar, savedEvs, savedNws
+                                        )
+                                        android.widget.Toast.makeText(context, if (res.getBoolean("saved")) "Saved to bookmarks!" else "Removed from bookmarks!", android.widget.Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Error saving post.", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            val curUser = EventHubApi.getSessionUser(context)
+                            val isSaved = remember(curUser.savedEventsJson) {
+                                try {
+                                    val arr = JSONArray(curUser.savedEventsJson)
+                                    var found = false
+                                    for (i in 0 until arr.length()) {
+                                        val item = arr.get(i)
+                                        val idStr = if (item is JSONObject) item.optString("_id", "") else item.toString()
+                                        if (idStr == eventId) found = true
+                                    }
+                                    found
+                                } catch (e: Exception) {
+                                    false
+                                }
+                            }
+                            Icon(
+                                imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Save",
+                                tint = if (isSaved) Color(0xFFF59E0B) else Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1046,7 +1101,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
             val imgUrl = news.optString("image", "")
             if (imgUrl.isNotEmpty()) {
                 AsyncImage(
-                    model = imgUrl,
+                    model = EventHubApi.formatImageUrl(imgUrl),
                     contentDescription = "News Cover",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1161,7 +1216,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Default.Comment,
                                 contentDescription = "Comments",
                                 tint = Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
@@ -1179,7 +1234,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                                         EventHubApi.trackPostAction(token, newsId, "download", "news")
                                     } catch (e: Exception) {}
                                     val detailsStr = "Title: $title\nCategory: $category\nSummary: $summary\nContent: $content\nPublished by: $adminName"
-                                    EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                    EventHubApi.downloadPostLocally(context, title, detailsStr, imgUrl)
                                     android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
                                 }
                             },
@@ -1216,6 +1271,52 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
                                 tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        val res = EventHubApi.toggleSavePost(token, newsId, "news")
+                                        val updatedUser = res.getJSONObject("user")
+                                        val savedEvs = updatedUser.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                        val savedNws = updatedUser.optJSONArray("savedNews")?.toString() ?: "[]"
+                                        val curUser = EventHubApi.getSessionUser(context)
+                                        EventHubApi.saveSession(
+                                            context, token, curUser.id, curUser.name, curUser.email, curUser.phone, curUser.avatar, savedEvs, savedNws
+                                        )
+                                        android.widget.Toast.makeText(context, if (res.getBoolean("saved")) "Saved to bookmarks!" else "Removed from bookmarks!", android.widget.Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Error saving post.", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            val curUser = EventHubApi.getSessionUser(context)
+                            val isSaved = remember(curUser.savedNewsJson) {
+                                try {
+                                    val arr = JSONArray(curUser.savedNewsJson)
+                                    var found = false
+                                    for (i in 0 until arr.length()) {
+                                        val item = arr.get(i)
+                                        val idStr = if (item is JSONObject) item.optString("_id", "") else item.toString()
+                                        if (idStr == newsId) found = true
+                                    }
+                                    found
+                                } catch (e: Exception) {
+                                    false
+                                }
+                            }
+                            Icon(
+                                imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = "Save",
+                                tint = if (isSaved) Color(0xFFF59E0B) else Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1350,7 +1451,11 @@ fun AlertsTab() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileTab(onLogout: () -> Unit) {
+fun ProfileTab(
+    onNavigateToEventDetail: (String) -> Unit,
+    onNavigateToNewsDetail: (String) -> Unit,
+    onLogout: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val token = remember { EventHubApi.getSessionToken(context) ?: "" }
@@ -1362,6 +1467,9 @@ fun ProfileTab(onLogout: () -> Unit) {
     var msg by remember { mutableStateOf("") }
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
+
+    var activeSubTab by remember { mutableStateOf("details") } // "details" or "saved"
+    var savedTypeTab by remember { mutableStateOf("events") } // "events" or "news"
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1385,6 +1493,8 @@ fun ProfileTab(onLogout: () -> Unit) {
                     val savedName = userObj.getString("name")
                     val savedPhone = userObj.optString("phone", "")
                     val savedAvatar = userObj.optString("avatar", "")
+                    val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                    val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
 
                     EventHubApi.saveSession(
                         context,
@@ -1393,7 +1503,9 @@ fun ProfileTab(onLogout: () -> Unit) {
                         savedName,
                         user.email,
                         savedPhone,
-                        savedAvatar
+                        savedAvatar,
+                        savedEvs,
+                        savedNws
                     )
                     user = EventHubApi.getSessionUser(context)
                     msg = "Photo uploaded and profile updated! ✓"
@@ -1464,120 +1576,316 @@ fun ProfileTab(onLogout: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             Text("Community Member", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Tab Selector Row
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = { activeSubTab = "details" },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (activeSubTab == "details") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
+                        contentColor = if (activeSubTab == "details") Color.White else Color(0xFF475569)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Edit Details", fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = { activeSubTab = "saved" },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (activeSubTab == "saved") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
+                        contentColor = if (activeSubTab == "saved") Color.White else Color(0xFF475569)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Saved Items", fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                    Text("Edit Profile Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
-                    Spacer(modifier = Modifier.height(16.dp))
+        if (activeSubTab == "details") {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+                        Text("Edit Profile Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    if (msg.isNotEmpty()) {
-                        Text(
-                            msg,
-                            color = if (msgType == "success") Color(0xFF065F46) else Color(0xFFDC2626),
-                            fontSize = 12.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(if (msgType == "success") Color(0xFFD1FAE5) else Color(0xFFFEF2F2))
-                                .padding(10.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                        if (msg.isNotEmpty()) {
+                            Text(
+                                msg,
+                                color = if (msgType == "success") Color(0xFF065F46) else Color(0xFFDC2626),
+                                fontSize = 12.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (msgType == "success") Color(0xFFD1FAE5) else Color(0xFFFEF2F2))
+                                    .padding(10.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        OutlinedTextField(
+                            value = nameInput,
+                            onValueChange = { nameInput = it },
+                            label = { Text("Display Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                    }
 
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("Display Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = user.email,
+                            onValueChange = {},
+                            label = { Text("Email Address (Locked)") },
+                            enabled = false,
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.Gray) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = user.email,
-                        onValueChange = {},
-                        label = { Text("Email Address (Locked)") },
-                        enabled = false,
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.Gray) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = phoneInput,
+                            onValueChange = { if (user.phone.isEmpty()) phoneInput = it },
+                            label = { Text(if (user.phone.isNotEmpty()) "Phone Number (Locked)" else "Phone Number") },
+                            enabled = user.phone.isEmpty(),
+                            leadingIcon = if (user.phone.isNotEmpty()) {
+                                { Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.Gray) }
+                            } else null,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
 
-                    OutlinedTextField(
-                        value = phoneInput,
-                        onValueChange = { if (user.phone.isEmpty()) phoneInput = it },
-                        label = { Text(if (user.phone.isNotEmpty()) "Phone Number (Locked)" else "Phone Number") },
-                        enabled = user.phone.isEmpty(),
-                        leadingIcon = if (user.phone.isNotEmpty()) {
-                            { Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.Gray) }
-                        } else null,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Button(
-                        onClick = {
-                            if (nameInput.isBlank()) {
-                                msg = "Name is required."
-                                msgType = "error"
-                                return@Button
-                            }
-                            scope.launch {
-                                loading = true
-                                msg = ""
-                                try {
-                                    val res = EventHubApi.updateProfile(
-                                        token = token,
-                                        name = nameInput.trim(),
-                                        avatar = avatarUrl,
-                                        phone = if (user.phone.isEmpty()) phoneInput.trim() else user.phone
-                                    )
-                                    val userObj = res.getJSONObject("user")
-                                    val savedName = userObj.getString("name")
-                                    val savedPhone = userObj.getString("phone")
-                                    val savedAvatar = userObj.getString("avatar")
-
-                                    val id = userObj.getString("id")
-                                    EventHubApi.saveSession(
-                                        context,
-                                        token,
-                                        id,
-                                        savedName,
-                                        user.email,
-                                        savedPhone,
-                                        savedAvatar
-                                    )
-                                    user = EventHubApi.getSessionUser(context)
-                                    msg = "Profile updated successfully! 🎉"
-                                    msgType = "success"
-                                } catch (e: Exception) {
-                                    msg = e.message ?: "Failed to update profile."
+                        Button(
+                            onClick = {
+                                if (nameInput.isBlank()) {
+                                    msg = "Name is required."
                                     msgType = "error"
-                                } finally {
-                                    loading = false
+                                    return@Button
+                                }
+                                scope.launch {
+                                    loading = true
+                                    msg = ""
+                                    try {
+                                        val res = EventHubApi.updateProfile(
+                                            token = token,
+                                            name = nameInput.trim(),
+                                            avatar = avatarUrl,
+                                            phone = if (user.phone.isEmpty()) phoneInput.trim() else user.phone
+                                        )
+                                        val userObj = res.getJSONObject("user")
+                                        val savedName = userObj.getString("name")
+                                        val savedPhone = userObj.getString("phone")
+                                        val savedAvatar = userObj.getString("avatar")
+                                        val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                        val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+
+                                        val id = userObj.getString("id")
+                                        EventHubApi.saveSession(
+                                            context,
+                                            token,
+                                            id,
+                                            savedName,
+                                            user.email,
+                                            savedPhone,
+                                            savedAvatar,
+                                            savedEvs,
+                                            savedNws
+                                        )
+                                        user = EventHubApi.getSessionUser(context)
+                                        msg = "Profile updated successfully! 🎉"
+                                        msgType = "success"
+                                    } catch (e: Exception) {
+                                        msg = e.message ?: "Failed to update profile."
+                                        msgType = "error"
+                                    } finally {
+                                        loading = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                            enabled = !loading
+                        ) {
+                            if (loading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("Save Changes")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (activeSubTab == "saved") {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isEvents = savedTypeTab == "events"
+                    val isNews = savedTypeTab == "news"
+                    Button(
+                        onClick = { savedTypeTab = "events" },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isEvents) Color(0xFF8B5CF6).copy(alpha = 0.15f) else Color.Transparent,
+                            contentColor = if (isEvents) Color(0xFF8B5CF6) else Color(0xFF64748B)
+                        ),
+                        border = BorderStroke(1.dp, if (isEvents) Color(0xFF8B5CF6) else Color(0xFFCBD5E1)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Events", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = { savedTypeTab = "news" },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isNews) Color(0xFFEC4899).copy(alpha = 0.15f) else Color.Transparent,
+                            contentColor = if (isNews) Color(0xFFEC4899) else Color(0xFF64748B)
+                        ),
+                        border = BorderStroke(1.dp, if (isNews) Color(0xFFEC4899) else Color(0xFFCBD5E1)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("News", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            val savedEventsArray = try { JSONArray(user.savedEventsJson) } catch (e: Exception) { JSONArray() }
+            val savedNewsArray = try { JSONArray(user.savedNewsJson) } catch (e: Exception) { JSONArray() }
+
+            val savedList = if (savedTypeTab == "events") {
+                val list = mutableListOf<JSONObject>()
+                for (i in 0 until savedEventsArray.length()) {
+                    list.add(savedEventsArray.getJSONObject(i))
+                }
+                list
+            } else {
+                val list = mutableListOf<JSONObject>()
+                for (i in 0 until savedNewsArray.length()) {
+                    list.add(savedNewsArray.getJSONObject(i))
+                }
+                list
+            }
+
+            if (savedList.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No saved ${savedTypeTab} yet.", color = Color(0xFF64748B), fontSize = 14.sp)
+                    }
+                }
+            } else {
+                items(savedList) { itemObj ->
+                    val itemId = itemObj.optString("_id", "")
+                    val itemTitle = itemObj.optString("title", "No Title")
+                    val itemCategory = itemObj.optString("category", "General")
+                    val itemImageUrl = itemObj.optString("image", "")
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .clickable {
+                                if (savedTypeTab == "events") {
+                                    onNavigateToEventDetail(itemId)
+                                } else {
+                                    onNavigateToNewsDetail(itemId)
+                                }
+                            },
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, CardBorderColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (itemImageUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = EventHubApi.formatImageUrl(itemImageUrl),
+                                    contentDescription = "Cover Image",
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF8B5CF6).copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (savedTypeTab == "events") Icons.Default.DateRange else Icons.Default.Info,
+                                        contentDescription = "Cover Placeholder",
+                                        tint = Color(0xFF8B5CF6),
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 }
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
-                        enabled = !loading
-                    ) {
-                        if (loading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Text("Save Changes")
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    itemTitle,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0F172A),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    itemCategory,
+                                    fontSize = 11.sp,
+                                    color = if (savedTypeTab == "events") Color(0xFF8B5CF6) else Color(0xFFEC4899),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            val res = EventHubApi.toggleSavePost(token, itemId, if (savedTypeTab == "events") "event" else "news")
+                                            val updatedUser = res.getJSONObject("user")
+                                            val savedEvs = updatedUser.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                            val savedNws = updatedUser.optJSONArray("savedNews")?.toString() ?: "[]"
+                                            EventHubApi.saveSession(
+                                                context, token, user.id, user.name, user.email, user.phone, user.avatar, savedEvs, savedNws
+                                            )
+                                            user = EventHubApi.getSessionUser(context)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Bookmark,
+                                    contentDescription = "Unsave",
+                                    tint = Color(0xFFF59E0B)
+                                )
+                            }
                         }
                     }
                 }
@@ -1695,7 +2003,7 @@ fun EventDetailScreen(
                             val imgUrl = ev.optString("image", "")
                             if (imgUrl.isNotEmpty()) {
                                 AsyncImage(
-                                    model = imgUrl,
+                                    model = EventHubApi.formatImageUrl(imgUrl),
                                     contentDescription = "Event Cover",
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1750,6 +2058,7 @@ fun EventDetailScreen(
                             val category = ev.getString("category")
                             val description = ev.getString("description")
                             val adminName = ev.getString("adminName")
+                            val imgUrl = ev.optString("image", "")
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1788,7 +2097,7 @@ fun EventDetailScreen(
                                                 EventHubApi.trackPostAction(token, eventId, "download", "event")
                                             } catch (e: Exception) {}
                                             val detailsStr = "Title: $title\nCategory: $category\nDescription: $description\nPosted by: $adminName"
-                                            EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                            EventHubApi.downloadPostLocally(context, title, detailsStr, imgUrl)
                                             android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
@@ -1823,6 +2132,53 @@ fun EventDetailScreen(
                                 ) {
                                     Icon(Icons.Default.Share, contentDescription = "Share")
                                 }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                val res = EventHubApi.toggleSavePost(token, eventId, "event")
+                                                val updatedUser = res.getJSONObject("user")
+                                                val savedEvs = updatedUser.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                                val savedNws = updatedUser.optJSONArray("savedNews")?.toString() ?: "[]"
+                                                val curUser = EventHubApi.getSessionUser(context)
+                                                EventHubApi.saveSession(
+                                                    context, token, curUser.id, curUser.name, curUser.email, curUser.phone, curUser.avatar, savedEvs, savedNws
+                                                )
+                                                val saved = res.getBoolean("saved")
+                                                android.widget.Toast.makeText(context, if (saved) "Saved to bookmarks!" else "Removed from bookmarks!", android.widget.Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, "Error saving post.", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    val curUser = EventHubApi.getSessionUser(context)
+                                    val isSaved = remember(curUser.savedEventsJson) {
+                                        try {
+                                            val arr = JSONArray(curUser.savedEventsJson)
+                                            var found = false
+                                            for (i in 0 until arr.length()) {
+                                                val item = arr.get(i)
+                                                val idStr = if (item is JSONObject) item.optString("_id", "") else item.toString()
+                                                if (idStr == eventId) found = true
+                                            }
+                                            found
+                                        } catch (e: Exception) {
+                                            false
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                        contentDescription = "Save",
+                                        tint = if (isSaved) Color(0xFFF59E0B) else Color(0xFF475569)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1854,7 +2210,7 @@ fun EventDetailScreen(
                                 commentInput = ""
                                 scope.launch {
                                     try {
-                                        EventHubApi.postComment(token, eventId, text)
+                                        EventHubApi.postComment(token, eventId, text, "event")
                                         loadDetails()
                                     } catch (e: Exception) {
                                         // Ignore
@@ -1995,7 +2351,7 @@ fun NewsDetailScreen(
                             val imgUrl = ns.optString("image", "")
                             if (imgUrl.isNotEmpty()) {
                                 AsyncImage(
-                                    model = imgUrl,
+                                    model = EventHubApi.formatImageUrl(imgUrl),
                                     contentDescription = "News Cover",
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -2062,7 +2418,7 @@ fun NewsDetailScreen(
                                                 EventHubApi.trackPostAction(token, newsId, "download", "news")
                                             } catch (e: Exception) {}
                                             val detailsStr = "Title: $title\nCategory: $category\nSummary: $summary\nContent: $content\nPublished by: $adminName"
-                                            EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                            EventHubApi.downloadPostLocally(context, title, detailsStr, imgUrl)
                                             android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     },
@@ -2097,6 +2453,53 @@ fun NewsDetailScreen(
                                 ) {
                                     Icon(Icons.Default.Share, contentDescription = "Share")
                                 }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                val res = EventHubApi.toggleSavePost(token, newsId, "news")
+                                                val updatedUser = res.getJSONObject("user")
+                                                val savedEvs = updatedUser.optJSONArray("savedEvents")?.toString() ?: "[]"
+                                                val savedNws = updatedUser.optJSONArray("savedNews")?.toString() ?: "[]"
+                                                val curUser = EventHubApi.getSessionUser(context)
+                                                EventHubApi.saveSession(
+                                                    context, token, curUser.id, curUser.name, curUser.email, curUser.phone, curUser.avatar, savedEvs, savedNws
+                                                )
+                                                val saved = res.getBoolean("saved")
+                                                android.widget.Toast.makeText(context, if (saved) "Saved to bookmarks!" else "Removed from bookmarks!", android.widget.Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, "Error saving post.", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    val curUser = EventHubApi.getSessionUser(context)
+                                    val isSaved = remember(curUser.savedNewsJson) {
+                                        try {
+                                            val arr = JSONArray(curUser.savedNewsJson)
+                                            var found = false
+                                            for (i in 0 until arr.length()) {
+                                                val item = arr.get(i)
+                                                val idStr = if (item is JSONObject) item.optString("_id", "") else item.toString()
+                                                if (idStr == newsId) found = true
+                                            }
+                                            found
+                                        } catch (e: Exception) {
+                                            false
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                        contentDescription = "Save",
+                                        tint = if (isSaved) Color(0xFFF59E0B) else Color(0xFF475569)
+                                    )
+                                }
                             }
                         }
                     }
@@ -2128,7 +2531,7 @@ fun NewsDetailScreen(
                                 commentInput = ""
                                 scope.launch {
                                     try {
-                                        EventHubApi.postComment(token, newsId, text)
+                                        EventHubApi.postComment(token, newsId, text, "news")
                                         loadDetails()
                                     } catch (e: Exception) {
                                         // Ignore

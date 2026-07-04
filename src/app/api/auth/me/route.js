@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Admin from '@/lib/models/Admin';
 import User from '@/lib/models/User';
+import Event from '@/lib/models/Event';
+import News from '@/lib/models/News';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(req) {
@@ -19,7 +21,10 @@ export async function GET(req) {
       }
       return NextResponse.json({ role: 'admin', user: admin });
     } else {
-      const user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id)
+        .select('-password')
+        .populate('savedEvents')
+        .populate('savedNews');
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
@@ -74,7 +79,9 @@ export async function PUT(req) {
         decoded.id,
         updateFields,
         { new: true }
-      ).select('-password');
+      ).select('-password')
+       .populate('savedEvents')
+       .populate('savedNews');
       return NextResponse.json({ role: 'user', user: updatedUser });
     }
   } catch (error) {
