@@ -155,11 +155,7 @@ export default function LoginPage() {
                 Sign Up
               </Link>
             </p>
-            <p>
-              <Link href="/admin/login" className="text-slate-500 hover:text-slate-600 font-medium">
-                Are you an administrator? Login here
-              </Link>
-            </p>
+
           </div>
         </div>
 
