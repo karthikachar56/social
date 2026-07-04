@@ -48,8 +48,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Redirect to login page for manual login
-      router.push('/login?registered=true');
+      // Auto-login and redirect to profile setup
+      signup(data.token, 'user', data.user);
+      router.push('/profile-setup');
     } catch (err) {
       setError('A network error occurred. Please try again.');
       setLoading(false);

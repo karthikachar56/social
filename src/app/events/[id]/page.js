@@ -39,14 +39,10 @@ export default function EventDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!token) {
-        router.push('/login');
-      } else if (role === 'user' && user && !user.phone) {
-        router.push('/profile-setup');
-      }
+    if (!authLoading && !token) {
+      router.push('/login');
     }
-  }, [authLoading, token, role, user, router]);
+  }, [authLoading, token, router]);
 
   const fetchEventDetails = async () => {
     try {
