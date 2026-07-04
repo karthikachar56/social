@@ -1248,25 +1248,47 @@ fun ManageUsersTab() {
                                 }
                             }
 
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            EventHubApi.toggleUserBan(token, usr.getString("_id"))
-                                            fetchUsers()
-                                        } catch (e: Exception) {
-                                            // Ignore
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.toggleUserBan(token, usr.getString("_id"), !isBanned)
+                                                fetchUsers()
+                                                android.widget.Toast.makeText(context, if (isBanned) "User reactivated! ✓" else "User suspended! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
+                                            }
                                         }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isBanned) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
-                                    contentColor = if (isBanned) Color(0xFF059669) else Color(0xFFDC2626)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp)
-                            ) {
-                                Text(if (isBanned) "Reactivate" else "Suspend", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isBanned) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
+                                        contentColor = if (isBanned) Color(0xFF059669) else Color(0xFFDC2626)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp)
+                                ) {
+                                    Text(if (isBanned) "Reactivate" else "Suspend", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                                
+                                Spacer(modifier = Modifier.width(4.dp))
+                                
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.deleteUser(token, usr.getString("_id"))
+                                                fetchUsers()
+                                                android.widget.Toast.makeText(context, "User deleted successfully! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    },
+                                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFDC2626))
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete User", modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
                     }

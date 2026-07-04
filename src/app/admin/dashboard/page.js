@@ -508,6 +508,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteUser = async (userToDelete) => {
+    if (!confirm(`Are you sure you want to delete user "${userToDelete.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/users/${userToDelete._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u._id !== userToDelete._id));
+        showToast(`User "${userToDelete.name}" has been deleted successfully!`, 'success');
+      } else {
+        showToast(data.error || 'Failed to delete user.', 'error');
+      }
+    } catch {
+      showToast('Network error. Try again.', 'error');
+    }
+  };
+
   // Stats computation
   const yourEventsCount = events.filter(e => e.adminId === user?.id || e.adminId === user?._id).length;
   const yourNewsCount = news.filter(n => n.adminId === user?.id || n.adminId === user?._id).length;
@@ -1975,16 +1998,24 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => handleToggleBan(u)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                              u.banned
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                            }`}
-                          >
-                            {u.banned ? 'Reactivate' : 'Suspend'}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleBan(u)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                u.banned
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                              }`}
+                            >
+                              {u.banned ? 'Reactivate' : 'Suspend'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-600 text-white hover:bg-red-700 transition cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -256,8 +256,15 @@ object EventHubApi {
         return JSONArray(apiRequest("/api/admin/users", "GET", null, token))
     }
 
-    suspend fun toggleUserBan(token: String, userId: String): JSONObject {
-        return JSONObject(apiRequest("/api/admin/users/$userId", "PUT", null, token))
+    suspend fun toggleUserBan(token: String, userId: String, banned: Boolean): JSONObject {
+        val body = JSONObject().apply {
+            put("banned", banned)
+        }
+        return JSONObject(apiRequest("/api/admin/users/$userId", "PUT", body, token))
+    }
+
+    suspend fun deleteUser(token: String, userId: String): JSONObject {
+        return JSONObject(apiRequest("/api/admin/users/$userId", "DELETE", null, token))
     }
 
     // Chat management
