@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -402,24 +403,17 @@ fun ProfileSetupScreen(
                                 modifier = Modifier
                                     .size(54.dp)
                                     .clip(CircleShape)
-                                    .background(if (avatarUrl == url) Color(0xFF8B5CF6) else Color.LightGray)
+                                    .background(if (avatarUrl == url) Color(0xFF8B5CF6) else Color.Transparent)
                                     .padding(if (avatarUrl == url) 3.dp else 0.dp)
                                     .clip(CircleShape)
                                     .clickable { avatarUrl = url }
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color(0xFFE2E8F0)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "Photo",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF475569)
-                                    )
-                                }
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = "Preset Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
                         }
                     }
@@ -632,14 +626,26 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF3E8FF)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.DateRange, contentDescription = "Event", tint = Color(0xFF8B5CF6))
+                val imgUrl = event.optString("image", "")
+                if (imgUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imgUrl,
+                        contentDescription = "Event Cover",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF3E8FF)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Event", tint = Color(0xFF8B5CF6))
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -759,14 +765,26 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFFCE7F3)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Info, contentDescription = "News", tint = Color(0xFFEC4899))
+                val imgUrl = news.optString("image", "")
+                if (imgUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imgUrl,
+                        contentDescription = "News Cover",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFFCE7F3)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = "News", tint = Color(0xFFEC4899))
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -947,19 +965,30 @@ fun ProfileTab(onLogout: () -> Unit) {
     ) {
         item {
             // Profile Card Header
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(CircleShape)
-                    .background(PurpleGradient),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "U",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
+            if (user.avatar.isNotEmpty()) {
+                AsyncImage(
+                    model = user.avatar,
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape)
+                        .background(PurpleGradient),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "U",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
@@ -1190,6 +1219,19 @@ fun EventDetailScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            val imgUrl = ev.optString("image", "")
+                            if (imgUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = imgUrl,
+                                    contentDescription = "Event Cover",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                             Text(ev.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                             Text(ev.getString("category"), fontSize = 12.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Bold)
 
@@ -1417,6 +1459,19 @@ fun NewsDetailScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            val imgUrl = ns.optString("image", "")
+                            if (imgUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = imgUrl,
+                                    contentDescription = "News Cover",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
                             Text(ns.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                             Text(ns.getString("category"), fontSize = 12.sp, color = Color(0xFFEC4899), fontWeight = FontWeight.Bold)
 

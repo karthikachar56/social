@@ -3,6 +3,7 @@ package com.example.eventhubadmin.ui
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -708,6 +709,35 @@ fun ManageUsersTab() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            val avatar = usr.optString("avatar", "")
+                            if (avatar.isNotEmpty()) {
+                                AsyncImage(
+                                    model = avatar,
+                                    contentDescription = "User Avatar",
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFE2E8F0)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (usr.getString("name").isNotEmpty()) usr.getString("name")[0].uppercaseChar().toString() else "U",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF475569)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
@@ -967,19 +997,30 @@ fun AdminProfileTab(onLogout: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(CircleShape)
-                    .background(PurpleGradient),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
+            if (user.avatar.isNotEmpty()) {
+                AsyncImage(
+                    model = user.avatar,
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(CircleShape)
+                        .background(PurpleGradient),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
