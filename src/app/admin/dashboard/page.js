@@ -755,9 +755,17 @@ export default function AdminDashboard() {
                 {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow shadow-purple-500/20">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow shadow-purple-500/20 flex-shrink-0">
               {user.name ? user.name[0].toUpperCase() : 'A'}
             </div>
+            
+            <button 
+              onClick={logout} 
+              className="p-2 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 transition md:hidden flex-shrink-0"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </header>
 
