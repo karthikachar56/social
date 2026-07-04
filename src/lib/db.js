@@ -1,8 +1,20 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/eventhub';
+const MONGO_URI = 
+  process.env.MONGO_URI || 
+  process.env.MONGODB_URI || 
+  process.env.MONGO_URL || 
+  process.env.MONGODB_URL || 
+  process.env.DATABASE_URL || 
+  'mongodb://localhost:27017/eventhub';
 
-console.log('Environment check - MONGO_URI present:', !!process.env.MONGO_URI, '| MONGODB_URI present:', !!process.env.MONGODB_URI);
+console.log('Environment check:', {
+  MONGO_URI_present: !!process.env.MONGO_URI,
+  MONGODB_URI_present: !!process.env.MONGODB_URI,
+  MONGO_URL_present: !!process.env.MONGO_URL,
+  MONGODB_URL_present: !!process.env.MONGODB_URL,
+  DATABASE_URL_present: !!process.env.DATABASE_URL
+});
 console.log('Database connection target:', MONGO_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local Host Fallback');
 
 /**
