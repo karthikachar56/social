@@ -114,6 +114,10 @@ export function AuthProvider({ children }) {
     return (item.likes || 0) + (alreadyLiked ? -1 : 1);
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -124,7 +128,9 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       isLiked,
-      toggleLike
+      toggleLike,
+      updateUser,
+      likedPosts
     }}>
       {children}
     </AuthContext.Provider>

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  const { user, role, token, loading: authLoading, logout, isLiked, toggleLike } = useAuth();
+  const { user, role, token, loading: authLoading, logout, isLiked, toggleLike, updateUser, likedPosts } = useAuth();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState('events');
@@ -35,6 +35,50 @@ export default function Home() {
   const [modal, setModal] = useState({ open: false, type: '', data: {} });
   const [stats, setStats] = useState({ admins: 6, events: 0, news: 0 });
   const [showToast, setShowToast] = useState(false);
+
+  // User Profile States
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', avatar: '' });
+  const [profileUpdating, setProfileUpdating] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ show: false, msg: '', type: 'success' });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ name: user.name || '', avatar: user.avatar || '' });
+    }
+  }, [user, profileOpen]);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileUpdating(true);
+    setProfileMsg({ show: false, msg: '', type: 'success' });
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        updateUser(data.user);
+        setProfileMsg({ show: true, msg: 'Profile updated successfully! 🎉', type: 'success' });
+        setTimeout(() => {
+          setProfileOpen(false);
+          setProfileMsg({ show: false, msg: '', type: 'success' });
+        }, 1200);
+      } else {
+        setProfileMsg({ show: true, msg: data.error || 'Failed to update profile.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setProfileMsg({ show: true, msg: 'Network error. Try again.', type: 'error' });
+    } finally {
+      setProfileUpdating(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -206,13 +250,19 @@ export default function Home() {
               <>
                 {user ? (
                   <div className="flex items-center gap-3">
-                    <div className="flex flex-col text-right hidden md:block">
-                      <span className="text-xs text-slate-500">Logged in as</span>
-                      <span className="text-sm font-semibold text-purple-200">{user.name}</span>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                      {user.name ? user.name[0].toUpperCase() : 'U'}
-                    </div>
+                    <button 
+                      onClick={() => setProfileOpen(true)}
+                      className="flex items-center gap-3 hover:opacity-80 transition text-left focus:outline-none cursor-pointer"
+                      title="View Profile"
+                    >
+                      <div className="flex flex-col text-right hidden md:block">
+                        <span className="text-xs text-slate-500">Logged in as</span>
+                        <span className="text-sm font-semibold text-purple-800">{user.name}</span>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                        {user.name ? user.name[0].toUpperCase() : 'U'}
+                      </div>
+                    </button>
                     
                     {role === 'admin' ? (
                       <Link href="/admin/dashboard" className="px-3.5 py-1.5 rounded-lg border border-purple-200 bg-purple-900/10 hover:bg-purple-900/30 text-xs font-semibold text-purple-800 transition flex items-center gap-1">
@@ -687,12 +737,104 @@ export default function Home() {
           <span className="font-semibold text-slate-500">EventHub</span>
         </div>
         <p>© 2024 EventHub. Powered by our team of admins.</p>
-        {role === 'admin' ? (
-          <p className="mt-2 text-[10px] text-slate-600">
-            Authenticated Admin Mode Active
-          </p>
-        ) : null}
       </footer>
+
+      {/* Profile Modal */}
+      {profileOpen && user && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setProfileOpen(false)}
+        >
+          <div 
+            className="glass rounded-2xl max-w-md w-full shadow-2xl relative border border-purple-200 p-6 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setProfileOpen(false)} 
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Profile Content */}
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-3xl font-black shadow-lg mx-auto mb-3">
+                  {user.name ? user.name[0].toUpperCase() : 'U'}
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
+                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">
+                  {role === 'admin' ? 'System Administrator' : 'Community Member'}
+                </p>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4 bg-slate-100/50 p-4 rounded-xl border border-slate-200/50 text-center">
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Posts Liked</p>
+                  <p className="text-xl font-bold text-slate-800">{Object.keys(likedPosts || {}).length}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Member Since</p>
+                  <p className="text-xs font-semibold text-slate-800 mt-1.5">
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'July 2026'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Edit Form */}
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                {profileMsg.show && (
+                  <div className={`px-4 py-2.5 rounded-xl text-xs font-semibold border ${
+                    profileMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
+                  }`}>
+                    {profileMsg.msg}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Display Name</label>
+                  <input 
+                    type="text" 
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    required
+                    className="input-field text-sm"
+                    placeholder="Enter your name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                  <input 
+                    type="email" 
+                    value={user.email}
+                    disabled
+                    className="input-field bg-slate-100 text-slate-500 text-sm border-slate-200 cursor-not-allowed"
+                    title="Email cannot be changed"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={profileUpdating}
+                  className="btn-primary w-full justify-center flex items-center gap-2 mt-2"
+                >
+                  {profileUpdating ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : 'Save Changes'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
