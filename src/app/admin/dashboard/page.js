@@ -165,6 +165,8 @@ export default function AdminDashboard() {
   const [submitLoading, setSubmitLoading] = useState({ event: false, news: false });
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' });
   const [deleteModal, setDeleteModal] = useState({ open: false, type: '', id: '', loading: false });
+  const [editModal, setEditModal] = useState({ open: false, type: '', id: null, loading: false });
+  const [editForm, setEditForm] = useState({});
 
   // Expanded comments for post manager
   const [expandedComments, setExpandedComments] = useState({}); 
@@ -555,6 +557,66 @@ export default function AdminDashboard() {
       }
     } catch {
       showToast('Network error.', 'error');
+    }
+  };
+
+  const handleEditClick = (type, item) => {
+    setEditModal({ open: true, type, id: item._id, loading: false });
+    if (type === 'event') {
+      setEditForm({
+        title: item.title || '',
+        description: item.description || '',
+        date: item.date || '',
+        time: item.time || '',
+        location: item.location || '',
+        category: item.category || 'General',
+        image: item.image || '',
+        tags: item.tags || []
+      });
+    } else {
+      setEditForm({
+        title: item.title || '',
+        content: item.content || '',
+        summary: item.summary || '',
+        category: item.category || 'General',
+        image: item.image || '',
+        tags: item.tags || []
+      });
+    }
+  };
+
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    setEditModal(prev => ({ ...prev, loading: true }));
+    const { type, id } = editModal;
+    
+    try {
+      const url = type === 'event' ? `/api/events/${id}` : `/api/news/${id}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        if (type === 'event') {
+          setEvents(prev => prev.map(ev => ev._id === id ? { ...ev, ...data } : ev));
+        } else {
+          setNews(prev => prev.map(nw => nw._id === id ? { ...nw, ...data } : nw));
+        }
+        showToast('Updated successfully!', 'success');
+        setEditModal({ open: false, type: '', id: null, loading: false });
+      } else {
+        showToast(data.error || 'Failed to update post.', 'error');
+      }
+    } catch {
+      showToast('Network error.', 'error');
+    } finally {
+      setEditModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -1285,12 +1347,20 @@ export default function AdminDashboard() {
                               )}
                             </div>
                             
-                            <button 
-                              onClick={() => handleDeleteItem('event', ev._id)} 
-                              className="btn-danger flex-shrink-0 self-center"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 self-center">
+                              <button 
+                                onClick={() => handleEditClick('event', ev)} 
+                                className="px-3 py-1.5 rounded-lg border border-purple-200 bg-purple-900/10 hover:bg-purple-900/20 text-xs font-semibold text-purple-800 transition flex items-center gap-1 cursor-pointer"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteItem('event', ev._id)} 
+                                className="btn-danger"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1385,12 +1455,20 @@ export default function AdminDashboard() {
                               )}
                             </div>
                             
-                            <button 
-                              onClick={() => handleDeleteItem('news', item._id)} 
-                              className="btn-danger flex-shrink-0 self-center"
-                            >
-                              <Trash2 className="w-3 h-3" /> Delete
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 self-center">
+                              <button 
+                                onClick={() => handleEditClick('news', item)} 
+                                className="px-3 py-1.5 rounded-lg border border-pink-200 bg-pink-900/10 hover:bg-pink-900/20 text-xs font-semibold text-pink-800 transition flex items-center gap-1 cursor-pointer"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteItem('news', item._id)} 
+                                className="btn-danger"
+                              >
+                                <Trash2 className="w-3 h-3" /> Delete
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1677,6 +1755,152 @@ export default function AdminDashboard() {
                 {deleteModal.loading ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* EDIT POST MODAL */}
+      {editModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-purple-200 bg-white p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/50 pb-3">
+              <h2 className="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                <span>✏️ Edit {editModal.type === 'event' ? 'Event' : 'News'}</span>
+              </h2>
+              <button 
+                onClick={() => setEditModal({ open: false, type: '', id: null, loading: false })}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit} className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700">Title</label>
+                <input 
+                  type="text" 
+                  value={editForm.title || ''} 
+                  onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                  required 
+                  className="input-field" 
+                />
+              </div>
+
+              {editModal.type === 'event' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Date</label>
+                      <input 
+                        type="date" 
+                        value={editForm.date || ''} 
+                        onChange={e => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                        required 
+                        className="input-field" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Time</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 18:00"
+                        value={editForm.time || ''} 
+                        onChange={e => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                        className="input-field" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Location</label>
+                    <input 
+                      type="text" 
+                      value={editForm.location || ''} 
+                      onChange={e => setEditForm(prev => ({ ...prev, location: e.target.value }))}
+                      className="input-field" 
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Description</label>
+                    <textarea 
+                      rows={4} 
+                      value={editForm.description || ''} 
+                      onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                      required 
+                      className="input-field"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Summary</label>
+                    <input 
+                      type="text" 
+                      value={editForm.summary || ''} 
+                      onChange={e => setEditForm(prev => ({ ...prev, summary: e.target.value }))}
+                      className="input-field" 
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Content</label>
+                    <textarea 
+                      rows={5} 
+                      value={editForm.content || ''} 
+                      onChange={e => setEditForm(prev => ({ ...prev, content: e.target.value }))}
+                      required 
+                      className="input-field"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Category</label>
+                  <select 
+                    value={editForm.category || 'General'} 
+                    onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="General">General</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Design">Design</option>
+                    <option value="Business">Business</option>
+                    <option value="Health">Health</option>
+                    <option value="Education">Education</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Image URL</label>
+                  <input 
+                    type="text" 
+                    value={editForm.image || ''} 
+                    onChange={e => setEditForm(prev => ({ ...prev, image: e.target.value }))}
+                    className="input-field" 
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4 border-t border-slate-200/50">
+                <button 
+                  type="button" 
+                  onClick={() => setEditModal({ open: false, type: '', id: null, loading: false })}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={editModal.loading}
+                  className="btn-primary px-5 py-2 rounded-xl text-white font-semibold transition"
+                >
+                  {editModal.loading ? 'Updating...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
