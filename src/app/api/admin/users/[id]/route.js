@@ -11,7 +11,7 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { banned } = await req.json();
 
     const updatedUser = await User.findByIdAndUpdate(
