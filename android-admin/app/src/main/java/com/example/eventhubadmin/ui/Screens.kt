@@ -3,6 +3,7 @@ package com.example.eventhubadmin.ui
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,10 @@ import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.util.Base64
+import java.io.InputStream
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -262,6 +267,30 @@ fun CreateTab() {
     var msg by remember { mutableStateOf("") }
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
+    var uploadLoading by remember { mutableStateOf(false) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    uploadLoading = true
+                    msg = ""
+                    val base64 = uriToBase64(context, uri)
+                    val cloudUrl = EventHubApi.uploadPhoto(token, base64)
+                    image = cloudUrl
+                    msg = "Photo uploaded successfully! ✓"
+                    msgType = "success"
+                } catch (e: Exception) {
+                    msg = e.message ?: "Failed to upload photo"
+                    msgType = "error"
+                } finally {
+                    uploadLoading = false
+                }
+            }
+        }
+    }
 
     val presetAvatars = listOf(
         "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=120&h=120&q=80",
@@ -369,29 +398,120 @@ fun CreateTab() {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    Text("Cover Image", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Image Preview Area
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFF1F5F9))
+                            .border(BorderStroke(1.dp, Color(0xFFE2E8F0)), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (image.isNotEmpty()) {
+                            val imageModel = formatImageUrl(image)
+                            if (imageModel != null) {
+                                AsyncImage(
+                                    model = imageModel,
+                                    contentDescription = "Cover Image Preview",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            // Clear Image Button
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                                    .clickable { image = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddCircle,
+                                    contentDescription = "No Image",
+                                    tint = Color(0xFF94A3B8),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("No cover image selected", fontSize = 11.sp, color = Color(0xFF94A3B8))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Image selection action (Gallery Picker)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { galleryLauncher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            shape = RoundedCornerShape(10.dp),
+                            enabled = !uploadLoading
+                        ) {
+                            if (uploadLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp))
+                            } else {
+                                Icon(Icons.Default.Add, contentDescription = "Upload", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Upload Cover Photo", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Custom URL input
+                    OutlinedTextField(
+                        value = image,
+                        onValueChange = { image = it },
+                        label = { Text("Or paste cover image URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6366F1))
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     // Preset Cover Image Selector
                     Text("Select Preset Cover Image", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
                     Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        presetAvatars.forEach { url ->
+                        items(presetAvatars) { url ->
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .size(72.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (image == url) Color(0xFF6366F1) else Color.LightGray)
+                                    .background(if (image == url) Color(0xFF6366F1) else Color.Transparent)
                                     .padding(if (image == url) 2.dp else 0.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable { image = url }
                             ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize().background(Color(0xFFE2E8F0)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Image", fontSize = 10.sp, color = Color(0xFF475569))
-                                }
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = "Preset cover",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
                         }
                     }
@@ -1807,4 +1927,13 @@ fun formatImageUrl(url: String): Any? {
         return url
     }
     return "https://social-eetirp.vercel.app" + if (url.startsWith("/")) url else "/$url"
+}
+
+fun uriToBase64(context: Context, uri: android.net.Uri): String {
+    val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+    val bytes = inputStream?.readBytes()
+    inputStream?.close()
+    return if (bytes != null) {
+        Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } else ""
 }
