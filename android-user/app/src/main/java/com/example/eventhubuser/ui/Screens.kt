@@ -612,8 +612,8 @@ fun DashboardScreen(
 fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var events by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var events by remember { mutableStateOf<List<JSONObject>>(EventHubApi.getCachedEvents()) }
+    var loading by remember { mutableStateOf(events.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
 
     // Filters states matching web
@@ -624,14 +624,17 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val array = EventHubApi.getEvents()
+                val array = EventHubApi.getEvents(force = true)
                 val list = mutableListOf<JSONObject>()
                 for (i in 0 until array.length()) {
                     list.add(array.getJSONObject(i))
                 }
                 events = list
+                errorMsg = ""
             } catch (e: Exception) {
-                errorMsg = e.message ?: "Failed to load events."
+                if (events.isEmpty()) {
+                    errorMsg = e.message ?: "Failed to load events."
+                }
             } finally {
                 loading = false
             }
@@ -642,7 +645,7 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFF8B5CF6))
         }
-    } else if (errorMsg.isNotEmpty()) {
+    } else if (errorMsg.isNotEmpty() && events.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
             Text(errorMsg, color = Color(0xFFDC2626), textAlign = TextAlign.Center)
         }
@@ -921,8 +924,8 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
 fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var newsList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    var newsList by remember { mutableStateOf<List<JSONObject>>(EventHubApi.getCachedNews()) }
+    var loading by remember { mutableStateOf(newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
 
     // Filters states matching web
@@ -933,14 +936,17 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val array = EventHubApi.getNews()
+                val array = EventHubApi.getNews(force = true)
                 val list = mutableListOf<JSONObject>()
                 for (i in 0 until array.length()) {
                     list.add(array.getJSONObject(i))
                 }
                 newsList = list
+                errorMsg = ""
             } catch (e: Exception) {
-                errorMsg = e.message ?: "Failed to load news."
+                if (newsList.isEmpty()) {
+                    errorMsg = e.message ?: "Failed to load news."
+                }
             } finally {
                 loading = false
             }
@@ -951,7 +957,7 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Color(0xFF8B5CF6))
         }
-    } else if (errorMsg.isNotEmpty()) {
+    } else if (errorMsg.isNotEmpty() && newsList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
             Text(errorMsg, color = Color(0xFFDC2626), textAlign = TextAlign.Center)
         }

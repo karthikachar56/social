@@ -57,26 +57,34 @@ object EventHubApi {
         prefs.edit().clear().apply()
     }
 
-    // Like local states mimicking web app localStorage
+    // Memory Cache for liked posts to eliminate disk read lags during list scrolls
+    private var likedPostsCache: MutableSet<String>? = null
+
+    private fun getLikedPosts(context: Context): Set<String> {
+        if (likedPostsCache == null) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            likedPostsCache = (prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()).toMutableSet()
+        }
+        return likedPostsCache!!
+    }
+
     fun isLiked(context: Context, id: String): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val set = prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()
-        return set.contains(id)
+        return getLikedPosts(context).contains(id)
     }
 
     fun toggleLike(context: Context, id: String): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val set = prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()
-        val newSet = set.toMutableSet()
+        val set = getLikedPosts(context).toMutableSet()
         val liked: Boolean
-        if (newSet.contains(id)) {
-            newSet.remove(id)
+        if (set.contains(id)) {
+            set.remove(id)
             liked = false
         } else {
-            newSet.add(id)
+            set.add(id)
             liked = true
         }
-        prefs.edit().putStringSet("liked_posts", newSet).apply()
+        likedPostsCache = set
+        prefs.edit().putStringSet("liked_posts", set).apply()
         return liked
     }
 
@@ -162,13 +170,40 @@ object EventHubApi {
         return res.getString("url")
     }
 
-    // Events and News
-    suspend fun getEvents(): JSONArray {
-        return JSONArray(apiRequest("/api/events", "GET"))
+    // Memory caches for news and events to enable instant offline state loading
+    private var eventsCache: JSONArray? = null
+    private var newsCache: JSONArray? = null
+
+    fun getCachedEvents(): List<JSONObject> {
+        val list = mutableListOf<JSONObject>()
+        val array = eventsCache ?: return emptyList()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        return list
     }
 
-    suspend fun getNews(): JSONArray {
-        return JSONArray(apiRequest("/api/news", "GET"))
+    fun getCachedNews(): List<JSONObject> {
+        val list = mutableListOf<JSONObject>()
+        val array = newsCache ?: return emptyList()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        return list
+    }
+
+    suspend fun getEvents(force: Boolean = false): JSONArray {
+        if (eventsCache == null || force) {
+            eventsCache = JSONArray(apiRequest("/api/events", "GET"))
+        }
+        return eventsCache!!
+    }
+
+    suspend fun getNews(force: Boolean = false): JSONArray {
+        if (newsCache == null || force) {
+            newsCache = JSONArray(apiRequest("/api/news", "GET"))
+        }
+        return newsCache!!
     }
 
     suspend fun toggleEventLike(token: String, eventId: String): JSONObject {
