@@ -1468,7 +1468,7 @@ fun ProfileTab(
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
 
-    var activeSubTab by remember { mutableStateOf("details") } // "details" or "saved"
+    var activeSubTab by remember { mutableStateOf("saved") } // "saved" or "details"
     var savedTypeTab by remember { mutableStateOf("events") } // "events" or "news"
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -1584,17 +1584,6 @@ fun ProfileTab(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { activeSubTab = "details" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (activeSubTab == "details") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
-                        contentColor = if (activeSubTab == "details") Color.White else Color(0xFF475569)
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Edit Details", fontWeight = FontWeight.Bold)
-                }
-                Button(
                     onClick = { activeSubTab = "saved" },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
@@ -1604,6 +1593,17 @@ fun ProfileTab(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Saved Items", fontWeight = FontWeight.Bold)
+                }
+                Button(
+                    onClick = { activeSubTab = "details" },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (activeSubTab == "details") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
+                        contentColor = if (activeSubTab == "details") Color.White else Color(0xFF475569)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Edit Details", fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))

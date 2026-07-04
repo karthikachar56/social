@@ -178,7 +178,7 @@ export default function Home() {
   const [profileMsg, setProfileMsg] = useState({ show: false, msg: '', type: 'success' });
   const profileFileInputRef = useRef(null);
   const [profileUploading, setProfileUploading] = useState(false);
-  const [profileTab, setProfileTab] = useState('details'); // 'details' or 'saved'
+  const [profileTab, setProfileTab] = useState('saved'); // 'saved' or 'details'
   const [savedSubTab, setSavedSubTab] = useState('events'); // 'events' or 'news'
 
   useEffect(() => {
@@ -1227,17 +1227,6 @@ export default function Home() {
                 <div className="flex border-b border-slate-200 gap-4 mb-4">
                   <button 
                     type="button"
-                    onClick={() => setProfileTab('details')}
-                    className={`flex-1 pb-2.5 text-sm font-bold transition border-b-2 text-center ${
-                      profileTab === 'details' 
-                        ? 'border-purple-600 text-purple-600' 
-                        : 'border-transparent text-slate-400 hover:text-slate-700'
-                    }`}
-                  >
-                    Edit Details
-                  </button>
-                  <button 
-                    type="button"
                     onClick={() => setProfileTab('saved')}
                     className={`flex-1 pb-2.5 text-sm font-bold transition border-b-2 text-center ${
                       profileTab === 'saved' 
@@ -1246,6 +1235,17 @@ export default function Home() {
                     }`}
                   >
                     Saved Posts
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setProfileTab('details')}
+                    className={`flex-1 pb-2.5 text-sm font-bold transition border-b-2 text-center ${
+                      profileTab === 'details' 
+                        ? 'border-purple-600 text-purple-600' 
+                        : 'border-transparent text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    Edit Details
                   </button>
                 </div>
               )}
