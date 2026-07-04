@@ -19,6 +19,14 @@ object EventHubApi {
     private const val KEY_USER_AVATAR = "user_avatar"
     private const val KEY_USER_OTHER = "user_other_details"
 
+    private var cachedEvents: JSONArray? = null
+    private var cachedNews: JSONArray? = null
+
+    fun getCachedEvents(): JSONArray = cachedEvents ?: JSONArray()
+    fun getCachedNews(): JSONArray = cachedNews ?: JSONArray()
+    fun setCachedEvents(arr: JSONArray) { cachedEvents = arr }
+    fun setCachedNews(arr: JSONArray) { cachedNews = arr }
+
     fun saveSession(
         context: Context,
         token: String,
@@ -142,12 +150,22 @@ object EventHubApi {
     }
 
     // Get posts list
-    suspend fun getEvents(): JSONArray {
-        return JSONArray(apiRequest("/api/events", "GET"))
+    suspend fun getEvents(force: Boolean = false): JSONArray {
+        if (!force && cachedEvents != null) {
+            return cachedEvents!!
+        }
+        val res = JSONArray(apiRequest("/api/events", "GET"))
+        cachedEvents = res
+        return res
     }
 
-    suspend fun getNews(): JSONArray {
-        return JSONArray(apiRequest("/api/news", "GET"))
+    suspend fun getNews(force: Boolean = false): JSONArray {
+        if (!force && cachedNews != null) {
+            return cachedNews!!
+        }
+        val res = JSONArray(apiRequest("/api/news", "GET"))
+        cachedNews = res
+        return res
     }
 
     // Admin Events/News Writing

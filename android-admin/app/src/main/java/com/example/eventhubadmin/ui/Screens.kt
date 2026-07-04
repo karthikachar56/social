@@ -615,22 +615,39 @@ fun ManagePostsTab() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val token = remember { EventHubApi.getSessionToken(context) ?: "" }
-    var events by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var newsList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+    val cachedEvs = remember {
+        val array = EventHubApi.getCachedEvents()
+        val list = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        list
+    }
+    val cachedNws = remember {
+        val array = EventHubApi.getCachedNews()
+        val list = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        list
+    }
+
+    var events by remember { mutableStateOf<List<JSONObject>>(cachedEvs) }
+    var newsList by remember { mutableStateOf<List<JSONObject>>(cachedNws) }
+    var loading by remember { mutableStateOf(events.isEmpty() && newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
 
     val fetchPosts = {
         scope.launch {
             try {
-                val evArray = EventHubApi.getEvents()
+                val evArray = EventHubApi.getEvents(force = true)
                 val evs = mutableListOf<JSONObject>()
                 for (i in 0 until evArray.length()) {
                     evs.add(evArray.getJSONObject(i))
                 }
                 events = evs
 
-                val nwArray = EventHubApi.getNews()
+                val nwArray = EventHubApi.getNews(force = true)
                 val nws = mutableListOf<JSONObject>()
                 for (i in 0 until nwArray.length()) {
                     nws.add(nwArray.getJSONObject(i))
@@ -1337,9 +1354,27 @@ fun AdminDashboardTab() {
     val user = remember { EventHubApi.getSessionUser(context) }
 
     var feedTab by remember { mutableStateOf(0) } // 0 = Events, 1 = News
-    var events by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var newsList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
+
+    val cachedEvs = remember {
+        val array = EventHubApi.getCachedEvents()
+        val list = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        list
+    }
+    val cachedNws = remember {
+        val array = EventHubApi.getCachedNews()
+        val list = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        list
+    }
+
+    var events by remember { mutableStateOf<List<JSONObject>>(cachedEvs) }
+    var newsList by remember { mutableStateOf<List<JSONObject>>(cachedNws) }
+    var loading by remember { mutableStateOf(events.isEmpty() && newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
 
     // Filters states
@@ -1358,14 +1393,14 @@ fun AdminDashboardTab() {
     val fetchPosts = {
         scope.launch {
             try {
-                val evArray = EventHubApi.getEvents()
+                val evArray = EventHubApi.getEvents(force = true)
                 val evs = mutableListOf<JSONObject>()
                 for (i in 0 until evArray.length()) {
                     evs.add(evArray.getJSONObject(i))
                 }
                 events = evs
 
-                val nwArray = EventHubApi.getNews()
+                val nwArray = EventHubApi.getNews(force = true)
                 val nws = mutableListOf<JSONObject>()
                 for (i in 0 until nwArray.length()) {
                     nws.add(nwArray.getJSONObject(i))
