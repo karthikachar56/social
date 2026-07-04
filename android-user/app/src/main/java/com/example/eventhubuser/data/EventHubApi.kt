@@ -16,16 +16,18 @@ object EventHubApi {
     private const val BASE_URL = "https://social-eetirp.vercel.app"
     private const val PREFS_NAME = "EventHubPrefs"
     private const val KEY_TOKEN = "jwt_token"
+    private const val KEY_USER_ID = "user_id"
     private const val KEY_USER_NAME = "user_name"
     private const val KEY_USER_EMAIL = "user_email"
     private const val KEY_USER_PHONE = "user_phone"
     private const val KEY_USER_AVATAR = "user_avatar"
 
     // SharedPreferences access
-    fun saveSession(context: Context, token: String, name: String, email: String, phone: String?, avatar: String?) {
+    fun saveSession(context: Context, token: String, id: String, name: String, email: String, phone: String?, avatar: String?) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().apply {
             putString(KEY_TOKEN, token)
+            putString(KEY_USER_ID, id)
             putString(KEY_USER_NAME, name)
             putString(KEY_USER_EMAIL, email)
             putString(KEY_USER_PHONE, phone ?: "")
@@ -42,6 +44,7 @@ object EventHubApi {
     fun getSessionUser(context: Context): UserProfile {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return UserProfile(
+            id = prefs.getString(KEY_USER_ID, "") ?: "",
             name = prefs.getString(KEY_USER_NAME, "") ?: "",
             email = prefs.getString(KEY_USER_EMAIL, "") ?: "",
             phone = prefs.getString(KEY_USER_PHONE, "") ?: "",
@@ -194,11 +197,35 @@ object EventHubApi {
     }
 
     suspend fun markAllNotificationsRead(token: String): JSONObject {
-        return JSONObject(apiRequest("/api/notifications", "PUT", null, token))
+        val body = JSONObject().apply { put("markAll", true) }
+        return JSONObject(apiRequest("/api/notifications", "PUT", body, token))
+    }
+
+    suspend fun markNotificationRead(token: String, notificationId: String): JSONObject {
+        val body = JSONObject().apply { put("id", notificationId) }
+        return JSONObject(apiRequest("/api/notifications", "PUT", body, token))
+    }
+
+    // Track Post Interaction (Share / Download)
+    suspend fun trackPostAction(token: String, postId: String, type: String, postType: String): JSONObject {
+        val body = JSONObject().apply {
+            put("type", type)
+            put("postType", postType)
+        }
+        return JSONObject(apiRequest("/api/posts/$postId/track", "POST", body, token))
+    }
+
+    // Permission-free Android file download helper
+    fun downloadPostLocally(context: Context, title: String, content: String): String {
+        val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
+        val file = File(dir, "${title.replace("\\s+".toRegex(), "_")}.txt")
+        file.writeText(content)
+        return file.absolutePath
     }
 }
 
 data class UserProfile(
+    val id: String,
     val name: String,
     val email: String,
     val phone: String,

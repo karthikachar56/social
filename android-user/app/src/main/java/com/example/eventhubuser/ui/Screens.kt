@@ -1,6 +1,10 @@
 package com.example.eventhubuser.ui
 
 import android.content.Context
+import android.util.Base64
+import java.io.InputStream
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -147,7 +151,8 @@ fun LoginScreen(
                                     if (role != "user") {
                                         errorMsg = "Access denied. Use Admin app for Administrator login."
                                     } else {
-                                        EventHubApi.saveSession(context, token, name, email, phone, avatar)
+                                        val id = userObj.getString("id")
+                                        EventHubApi.saveSession(context, token, id, name, email, phone, avatar)
                                         onLoginSuccess()
                                     }
                                 } catch (e: Exception) {
@@ -296,7 +301,8 @@ fun RegisterScreen(
                                     val phone = userObj.optString("phone", "")
                                     val avatar = userObj.optString("avatar", "")
 
-                                    EventHubApi.saveSession(context, token, savedName, email.trim(), phone, avatar)
+                                    val id = userObj.getString("id")
+                                    EventHubApi.saveSession(context, token, id, savedName, email.trim(), phone, avatar)
                                     onRegisterSuccess()
                                 } catch (e: Exception) {
                                     errorMsg = e.message ?: "Registration failed."
@@ -391,20 +397,41 @@ fun ProfileSetupScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
 
+                    val galleryLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                    ) { uri: android.net.Uri? ->
+                        if (uri != null) {
+                            scope.launch {
+                                try {
+                                    loading = true
+                                    val base64 = uriToBase64(context, uri)
+                                    val cloudUrl = EventHubApi.uploadPhoto(token, base64)
+                                    avatarUrl = cloudUrl
+                                    errorMsg = ""
+                                } catch (e: Exception) {
+                                    errorMsg = e.message ?: "Failed to upload custom photo."
+                                } finally {
+                                    loading = false
+                                }
+                            }
+                        }
+                    }
+
                     // Preset Avatars Selector
                     Text("Select a Profile Photo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         presetAvatars.forEach { url ->
                             Box(
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(46.dp)
                                     .clip(CircleShape)
                                     .background(if (avatarUrl == url) Color(0xFF8B5CF6) else Color.Transparent)
-                                    .padding(if (avatarUrl == url) 3.dp else 0.dp)
+                                    .padding(if (avatarUrl == url) 2.dp else 0.dp)
                                     .clip(CircleShape)
                                     .clickable { avatarUrl = url }
                             ) {
@@ -414,6 +441,29 @@ fun ProfileSetupScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
+                            }
+                        }
+
+                        val isCustomSelected = avatarUrl.isNotEmpty() && !presetAvatars.contains(avatarUrl)
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(if (isCustomSelected) Color(0xFF8B5CF6) else Color(0xFFEEF2F6))
+                                .padding(if (isCustomSelected) 2.dp else 0.dp)
+                                .clip(CircleShape)
+                                .clickable { galleryLauncher.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCustomSelected) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "Custom Avatar",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Upload Custom", tint = Color(0xFF8B5CF6), modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -462,9 +512,11 @@ fun ProfileSetupScreen(
                                     val savedPhone = userObj.getString("phone")
                                     val savedAvatar = userObj.getString("avatar")
 
+                                    val id = userObj.getString("id")
                                     EventHubApi.saveSession(
                                         context,
                                         token,
+                                        id,
                                         savedName,
                                         user.email,
                                         savedPhone,
@@ -607,9 +659,12 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Upcoming Events", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Join and participate in active events", fontSize = 12.sp, color = Color(0xFF64748B))
+                EventHubHeroHeader(
+                    title = "Discover Events\n& Latest News",
+                    subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
+                    eventsCount = events.size,
+                    newsCount = 0
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
@@ -656,7 +711,13 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
 fun EventCard(event: JSONObject, onClick: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    
+    val eventId = event.getString("_id")
+    val title = event.getString("title")
+    val category = event.getString("category")
+    val description = event.getString("description")
+    val adminName = event.getString("adminName")
+    val commentsCount = event.optInt("commentsCount", 0)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -665,95 +726,191 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val imgUrl = event.optString("image", "")
-                if (imgUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = imgUrl,
-                        contentDescription = "Event Cover",
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF3E8FF)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Event", tint = Color(0xFF8B5CF6))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        event.getString("title"),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E293B)
-                    )
-                    Text(
-                        event.getString("category"),
-                        fontSize = 11.sp,
-                        color = Color(0xFF8B5CF6),
-                        fontWeight = FontWeight.Bold
+        Column {
+            val imgUrl = event.optString("image", "")
+            if (imgUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imgUrl,
+                    contentDescription = "Event Cover",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .background(Brush.linearGradient(listOf(Color(0xFF8B5CF6).copy(alpha = 0.2f), Color(0xFFEC4899).copy(alpha = 0.1f)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = "Event",
+                        tint = Color(0xFF8B5CF6),
+                        modifier = Modifier.size(48.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                event.getString("description"),
-                fontSize = 13.sp,
-                color = Color(0xFF475569),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Place, contentDescription = "Location", tint = Color(0xFF64748B), modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(event.optString("location", "Virtual"), fontSize = 11.sp, color = Color(0xFF64748B))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF3E8FF))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        Text("EVENT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF8B5CF6))
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF1F5F9))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, event.getString("_id"))) }
-                    val likesCount = remember { mutableStateOf(event.optInt("likes", 0)) }
-                    IconButton(
-                        onClick = {
-                            val token = EventHubApi.getSessionToken(context) ?: return@IconButton
-                            scope.launch {
-                                val likedNow = EventHubApi.toggleLike(context, event.getString("_id"))
-                                isLiked.value = likedNow
-                                try {
-                                    val res = EventHubApi.toggleEventLike(token, event.getString("_id"))
-                                    likesCount.value = res.getInt("likes")
-                                } catch (e: Exception) {
-                                    likesCount.value = likesCount.value + if (likedNow) 1 else -1
-                                }
-                            }
-                        },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Likes",
-                            tint = if (isLiked.value) Color(0xFFEC4899) else Color.Gray,
-                            modifier = Modifier.size(16.dp)
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F172A),
+                    lineHeight = 22.sp
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    description,
+                    fontSize = 13.sp,
+                    color = Color(0xFF475569),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Place, contentDescription = "Location", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(event.optString("location", "Virtual"), fontSize = 11.sp, color = Color(0xFF64748B))
                     }
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("${likesCount.value} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Person, contentDescription = "Author", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Posted by $adminName", fontSize = 11.sp, color = Color(0xFF64748B))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color(0xFFF1F5F9))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, eventId)) }
+                    val likesCount = remember { mutableStateOf(event.optInt("likes", 0)) }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    val likedNow = EventHubApi.toggleLike(context, eventId)
+                                    isLiked.value = likedNow
+                                    try {
+                                        val res = EventHubApi.toggleEventLike(token, eventId)
+                                        likesCount.value = res.getInt("likes")
+                                    } catch (e: Exception) {
+                                        likesCount.value = likesCount.value + if (likedNow) 1 else -1
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Like",
+                                tint = if (isLiked.value) Color(0xFFEC4899) else Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text("${likesCount.value}", fontSize = 11.sp, color = Color(0xFF64748B))
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        IconButton(
+                            onClick = onClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Comments",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text("$commentsCount", fontSize = 11.sp, color = Color(0xFF64748B))
+                    }
+
+                    Row {
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        EventHubApi.trackPostAction(token, eventId, "download", "event")
+                                    } catch (e: Exception) {}
+                                    val detailsStr = "Title: $title\nCategory: $category\nDescription: $description\nPosted by: $adminName"
+                                    EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                    android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDownward,
+                                contentDescription = "Download",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        EventHubApi.trackPostAction(token, eventId, "share", "event")
+                                    } catch (e: Exception) {}
+                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, title)
+                                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this event on EventHub: $title\nhttps://social-eetirp.vercel.app/events/$eventId")
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -811,9 +968,12 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("News Updates", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Stay informed with updates from our admins", fontSize = 12.sp, color = Color(0xFF64748B))
+                EventHubHeroHeader(
+                    title = "Discover Events\n& Latest News",
+                    subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
+                    eventsCount = 0,
+                    newsCount = newsList.size
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Search Bar
@@ -860,6 +1020,13 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
 fun NewsCard(news: JSONObject, onClick: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val newsId = news.getString("_id")
+    val title = news.getString("title")
+    val category = news.getString("category")
+    val summary = news.optString("summary", "Read details...")
+    val content = news.optString("content", "")
+    val adminName = news.optString("adminName", "Admin")
+    val commentsCount = news.optInt("commentsCount", 0)
 
     Card(
         modifier = Modifier
@@ -869,95 +1036,184 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val imgUrl = news.optString("image", "")
-                if (imgUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = imgUrl,
-                        contentDescription = "News Cover",
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFFCE7F3)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = "News", tint = Color(0xFFEC4899))
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        news.getString("title"),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E293B)
-                    )
-                    Text(
-                        news.getString("category"),
-                        fontSize = 11.sp,
-                        color = Color(0xFFEC4899),
-                        fontWeight = FontWeight.Bold
+        Column {
+            val imgUrl = news.optString("image", "")
+            if (imgUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imgUrl,
+                    contentDescription = "News Cover",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .background(Brush.linearGradient(listOf(Color(0xFFEC4899).copy(alpha = 0.2f), Color(0xFF8B5CF6).copy(alpha = 0.1f)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = "News",
+                        tint = Color(0xFFEC4899),
+                        modifier = Modifier.size(48.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                news.optString("summary", "Read detail update..."),
-                fontSize = 13.sp,
-                color = Color(0xFF475569),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFFCE7F3))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        Text("NEWS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEC4899))
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF1F5F9))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Published by admin",
-                    fontSize = 11.sp,
-                    color = Color(0xFF64748B)
+                    title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F172A),
+                    lineHeight = 22.sp
                 )
 
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    summary,
+                    fontSize = 13.sp,
+                    color = Color(0xFF475569),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, news.getString("_id"))) }
+                    Icon(Icons.Default.Person, contentDescription = "Author", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Published by $adminName", fontSize = 11.sp, color = Color(0xFF64748B))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Color(0xFFF1F5F9))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, newsId)) }
                     val likesCount = remember { mutableStateOf(news.optInt("likes", 0)) }
-                    IconButton(
-                        onClick = {
-                            val token = EventHubApi.getSessionToken(context) ?: return@IconButton
-                            scope.launch {
-                                val likedNow = EventHubApi.toggleLike(context, news.getString("_id"))
-                                isLiked.value = likedNow
-                                try {
-                                    val res = EventHubApi.toggleNewsLike(token, news.getString("_id"))
-                                    likesCount.value = res.getInt("likes")
-                                } catch (e: Exception) {
-                                    likesCount.value = likesCount.value + if (likedNow) 1 else -1
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    val likedNow = EventHubApi.toggleLike(context, newsId)
+                                    isLiked.value = likedNow
+                                    try {
+                                        val res = EventHubApi.toggleNewsLike(token, newsId)
+                                        likesCount.value = res.getInt("likes")
+                                    } catch (e: Exception) {
+                                        likesCount.value = likesCount.value + if (likedNow) 1 else -1
+                                    }
                                 }
-                            }
-                        },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Likes",
-                            tint = if (isLiked.value) Color(0xFFEC4899) else Color.Gray,
-                            modifier = Modifier.size(16.dp)
-                        )
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Like",
+                                tint = if (isLiked.value) Color(0xFFEC4899) else Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text("${likesCount.value}", fontSize = 11.sp, color = Color(0xFF64748B))
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        IconButton(
+                            onClick = onClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Comments",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text("$commentsCount", fontSize = 11.sp, color = Color(0xFF64748B))
                     }
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("${likesCount.value} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
+
+                    Row {
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        EventHubApi.trackPostAction(token, newsId, "download", "news")
+                                    } catch (e: Exception) {}
+                                    val detailsStr = "Title: $title\nCategory: $category\nSummary: $summary\nContent: $content\nPublished by: $adminName"
+                                    EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                    android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDownward,
+                                contentDescription = "Download",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        IconButton(
+                            onClick = {
+                                val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                                scope.launch {
+                                    try {
+                                        EventHubApi.trackPostAction(token, newsId, "share", "news")
+                                    } catch (e: Exception) {}
+                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, title)
+                                        putExtra(android.content.Intent.EXTRA_TEXT, "Check out this news on EventHub: $title\nhttps://social-eetirp.vercel.app/news/$newsId")
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1044,7 +1300,20 @@ fun AlertsTab() {
                 items(notifications) { notif ->
                     val isRead = notif.optBoolean("read", false)
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (!isRead) {
+                                    scope.launch {
+                                        try {
+                                            EventHubApi.markNotificationRead(token, notif.getString("_id"))
+                                            fetchNotifications()
+                                        } catch (e: Exception) {
+                                            // Ignore
+                                        }
+                                    }
+                                }
+                            },
                         colors = CardDefaults.cardColors(
                             containerColor = if (isRead) Color.White else Color(0xFFF5F3FF)
                         ),
@@ -1057,7 +1326,7 @@ fun AlertsTab() {
                                     .size(8.dp)
                                     .clip(CircleShape)
                                     .background(if (isRead) Color.Transparent else Color(0xFF8B5CF6))
-                            )
+                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 notif.getString("message"),
@@ -1088,35 +1357,101 @@ fun ProfileTab(onLogout: () -> Unit) {
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    loading = true
+                    msg = ""
+                    val base64 = uriToBase64(context, uri)
+                    val cloudUrl = EventHubApi.uploadPhoto(token, base64)
+                    avatarUrl = cloudUrl
+                    
+                    val res = EventHubApi.updateProfile(
+                        token = token,
+                        name = nameInput.trim(),
+                        avatar = cloudUrl,
+                        phone = if (user.phone.isEmpty()) phoneInput.trim() else user.phone
+                    )
+                    val userObj = res.getJSONObject("user")
+                    val savedName = userObj.getString("name")
+                    val savedPhone = userObj.optString("phone", "")
+                    val savedAvatar = userObj.optString("avatar", "")
+
+                    EventHubApi.saveSession(
+                        context,
+                        token,
+                        userObj.getString("id"),
+                        savedName,
+                        user.email,
+                        savedPhone,
+                        savedAvatar
+                    )
+                    user = EventHubApi.getSessionUser(context)
+                    msg = "Photo uploaded and profile updated! ✓"
+                    msgType = "success"
+                } catch (e: Exception) {
+                    msg = e.message ?: "Failed to upload custom photo."
+                    msgType = "error"
+                } finally {
+                    loading = false
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            // Profile Card Header
-            if (user.avatar.isNotEmpty()) {
-                AsyncImage(
-                    model = user.avatar,
-                    contentDescription = "Avatar",
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
+            Box(
+                modifier = Modifier
+                    .size(84.dp)
+                    .clickable { galleryLauncher.launch("image/*") },
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                if (user.avatar.isNotEmpty()) {
+                    AsyncImage(
+                        model = user.avatar,
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(PurpleGradient),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "U",
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
-                        .size(84.dp)
+                        .size(24.dp)
                         .clip(CircleShape)
-                        .background(PurpleGradient),
+                        .background(Color(0xFF8B5CF6))
+                        .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "U",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Edit photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -1207,9 +1542,11 @@ fun ProfileTab(onLogout: () -> Unit) {
                                     val savedPhone = userObj.getString("phone")
                                     val savedAvatar = userObj.getString("avatar")
 
+                                    val id = userObj.getString("id")
                                     EventHubApi.saveSession(
                                         context,
                                         token,
+                                        id,
                                         savedName,
                                         user.email,
                                         savedPhone,
@@ -1403,31 +1740,83 @@ fun EventDetailScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             val isLiked = EventHubApi.isLiked(context, eventId)
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            EventHubApi.toggleLike(context, eventId)
-                                            EventHubApi.toggleEventLike(token, eventId)
-                                            loadDetails()
-                                        } catch (e: Exception) {
-                                            // Ignore
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
-                                    contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            val title = ev.getString("title")
+                            val category = ev.getString("category")
+                            val description = ev.getString("description")
+                            val adminName = ev.getString("adminName")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "Like"
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("${ev.optInt("likes", 0)} Likes")
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.toggleLike(context, eventId)
+                                                EventHubApi.toggleEventLike(token, eventId)
+                                                loadDetails()
+                                            } catch (e: Exception) {
+                                                // Ignore
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                        contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Like"
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("${ev.optInt("likes", 0)}")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.trackPostAction(token, eventId, "download", "event")
+                                            } catch (e: Exception) {}
+                                            val detailsStr = "Title: $title\nCategory: $category\nDescription: $description\nPosted by: $adminName"
+                                            EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                            android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Download")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.trackPostAction(token, eventId, "share", "event")
+                                            } catch (e: Exception) {}
+                                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, title)
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out this event on EventHub: $title\nhttps://social-eetirp.vercel.app/events/$eventId")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share")
+                                }
                             }
                         }
                     }
@@ -1624,31 +2013,84 @@ fun NewsDetailScreen(
                             Spacer(modifier = Modifier.height(20.dp))
 
                             val isLiked = EventHubApi.isLiked(context, newsId)
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            EventHubApi.toggleLike(context, newsId)
-                                            EventHubApi.toggleNewsLike(token, newsId)
-                                            loadDetails()
-                                        } catch (e: Exception) {
-                                            // Ignore
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
-                                    contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            val title = ns.getString("title")
+                            val category = ns.getString("category")
+                            val summary = ns.optString("summary", "Read details...")
+                            val content = ns.optString("content", "")
+                            val adminName = ns.optString("adminName", "Admin")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "Like"
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("${ns.optInt("likes", 0)} Likes")
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.toggleLike(context, newsId)
+                                                EventHubApi.toggleNewsLike(token, newsId)
+                                                loadDetails()
+                                            } catch (e: Exception) {
+                                                // Ignore
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                        contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Like"
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("${ns.optInt("likes", 0)}")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.trackPostAction(token, newsId, "download", "news")
+                                            } catch (e: Exception) {}
+                                            val detailsStr = "Title: $title\nCategory: $category\nSummary: $summary\nContent: $content\nPublished by: $adminName"
+                                            EventHubApi.downloadPostLocally(context, title, detailsStr)
+                                            android.widget.Toast.makeText(context, "Details downloaded!", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.ArrowDownward, contentDescription = "Download")
+                                }
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.trackPostAction(token, newsId, "share", "news")
+                                            } catch (e: Exception) {}
+                                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, title)
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out this news on EventHub: $title\nhttps://social-eetirp.vercel.app/news/$newsId")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFEEF2F6),
+                                        contentColor = Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share")
+                                }
                             }
                         }
                     }
@@ -1727,6 +2169,91 @@ fun NewsDetailScreen(
 }
 
 @Composable
+fun EventHubHeroHeader(
+    title: String,
+    subtitle: String,
+    eventsCount: Int,
+    newsCount: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, CardBorderColor)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF8B5CF6).copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFFF3E8FF))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                Text("LIVE COMMUNITY PLATFORM", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF8B5CF6))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                title,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+                color = Color(0xFF0F172A),
+                textAlign = TextAlign.Center,
+                lineHeight = 30.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                subtitle,
+                fontSize = 12.sp,
+                color = Color(0xFF64748B),
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = Color(0xFFF1F5F9))
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF22C55E)))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Live Updates", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                }
+                Text("•", color = Color(0xFFCBD5E1))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = "Admins", tint = Color(0xFF8B5CF6), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("6 Admins", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                }
+                Text("•", color = Color(0xFFCBD5E1))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Stats", tint = Color(0xFFEC4899), modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(if (eventsCount > 0) "$eventsCount Events" else "$newsCount Articles", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun CategoryChip(
     text: String,
     selected: Boolean,
@@ -1745,5 +2272,14 @@ fun CategoryChip(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
         )
     }
+}
+
+fun uriToBase64(context: Context, uri: android.net.Uri): String {
+    val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+    val bytes = inputStream?.readBytes()
+    inputStream?.close()
+    return if (bytes != null) {
+        Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } else ""
 }
 
