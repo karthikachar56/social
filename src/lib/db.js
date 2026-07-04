@@ -1,21 +1,30 @@
 import mongoose from 'mongoose';
 
-const MONGO_URI = 
-  process.env.MONGO_URI || 
-  process.env.MONGODB_URI || 
-  process.env.MONGO_URL || 
-  process.env.MONGODB_URL || 
-  process.env.DATABASE_URL || 
-  'mongodb://localhost:27017/eventhub';
+let selectedKey = 'default';
+let resolvedURI = 'mongodb://localhost:27017/eventhub';
 
-console.log('Environment check:', {
-  MONGO_URI_present: !!process.env.MONGO_URI,
-  MONGODB_URI_present: !!process.env.MONGODB_URI,
-  MONGO_URL_present: !!process.env.MONGO_URL,
-  MONGODB_URL_present: !!process.env.MONGODB_URL,
-  DATABASE_URL_present: !!process.env.DATABASE_URL
-});
-console.log('Database connection target:', MONGO_URI.startsWith('mongodb+srv') ? 'Cloud MongoDB Atlas' : 'Local Host Fallback');
+if (process.env.MONGO_URI) {
+  selectedKey = 'MONGO_URI';
+  resolvedURI = process.env.MONGO_URI;
+} else if (process.env.MONGODB_URI) {
+  selectedKey = 'MONGODB_URI';
+  resolvedURI = process.env.MONGODB_URI;
+} else if (process.env.MONGO_URL) {
+  selectedKey = 'MONGO_URL';
+  resolvedURI = process.env.MONGO_URL;
+} else if (process.env.MONGODB_URL) {
+  selectedKey = 'MONGODB_URL';
+  resolvedURI = process.env.MONGODB_URL;
+} else if (process.env.DATABASE_URL) {
+  selectedKey = 'DATABASE_URL';
+  resolvedURI = process.env.DATABASE_URL;
+}
+
+const MONGO_URI = resolvedURI;
+const hostName = resolvedURI.includes('@') ? resolvedURI.split('@')[1].split('/')[0] : 'localhost';
+
+console.log('Database connection target key:', selectedKey);
+console.log('Database connection host:', hostName);
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
