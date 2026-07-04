@@ -120,13 +120,13 @@ export default function AdminLoginPage() {
             <h1 className="text-2xl font-black gradient-text">EventHub Admin</h1>
           </div>
 
-          <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
-            <h2 className="text-2xl font-bold text-white mb-1 font-sans">Welcome back</h2>
+          <div className="glass rounded-2xl p-8 border border-purple-100 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-900 mb-1 font-sans">Welcome back</h2>
             <p className="text-slate-500 text-sm mb-6 font-sans">Sign in to your admin account</p>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-4 px-4 py-3 rounded-xl bg-red-950/20 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+              <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -162,7 +162,7 @@ export default function AdminLoginPage() {
                   <button 
                     type="button" 
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition text-xs font-semibold"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-purple-600 transition text-xs font-semibold"
                   >
                     {showPass ? 'Hide' : 'Show'}
                   </button>
@@ -199,7 +199,7 @@ export default function AdminLoginPage() {
                         {admin.name[0]}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 truncate group-hover:text-white transition">{admin.name}</p>
+                        <p className="text-[10px] font-semibold text-slate-600 truncate group-hover:text-purple-600 transition">{admin.name}</p>
                         <p className="text-[9px] text-slate-600 truncate">{admin.email}</p>
                       </div>
                     </div>
@@ -213,7 +213,7 @@ export default function AdminLoginPage() {
           </div>
 
           <p className="text-center text-sm text-slate-600 mt-6">
-            <Link href="/" className="text-purple-400 hover:text-purple-300 transition inline-flex items-center justify-center gap-1.5">
+            <Link href="/" className="text-purple-400 hover:text-purple-800 transition inline-flex items-center justify-center gap-1.5">
               <ArrowLeft className="w-3.5 h-3.5" /> Back to EventHub
             </Link>
           </p>

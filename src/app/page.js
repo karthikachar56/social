@@ -215,7 +215,7 @@ export default function Home() {
                     </div>
                     
                     {role === 'admin' ? (
-                      <Link href="/admin/dashboard" className="px-3.5 py-1.5 rounded-lg border border-purple-500/30 bg-purple-900/10 hover:bg-purple-900/30 text-xs font-semibold text-purple-300 transition flex items-center gap-1">
+                      <Link href="/admin/dashboard" className="px-3.5 py-1.5 rounded-lg border border-purple-200 bg-purple-900/10 hover:bg-purple-900/30 text-xs font-semibold text-purple-800 transition flex items-center gap-1">
                         <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
                       </Link>
                     ) : null}
@@ -226,7 +226,7 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Link href="/login" className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-purple-600 transition text-slate-600 hover:text-white">
+                    <Link href="/login" className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold hover:border-purple-600 transition text-slate-600 hover:text-purple-600">
                       Sign In
                     </Link>
                     <Link href="/register" className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-xs font-semibold hover:opacity-90 transition text-white shadow-md shadow-purple-600/20">
@@ -243,7 +243,7 @@ export default function Home() {
       {/* HERO */}
       <section className="hero-bg py-20 px-4 text-center">
         <div className="max-w-3xl mx-auto fade-up">
-          <span className="badge badge-event mb-4 uppercase tracking-widest bg-purple-900/30 border-purple-700/40 text-purple-300 px-3 py-1 text-[10px] rounded-full">Live Community Platform</span>
+          <span className="badge badge-event mb-4 uppercase tracking-widest bg-purple-900/30 border-purple-700/40 text-purple-800 px-3 py-1 text-[10px] rounded-full">Live Community Platform</span>
           <h1 className="text-4xl sm:text-6xl font-black mb-4 leading-tight">
             Discover <span className="gradient-text">Events</span><br />& Latest <span class="gradient-text">News</span>
           </h1>
@@ -277,7 +277,7 @@ export default function Home() {
             placeholder="Search events and news..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-inner"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition shadow-inner"
           />
         </div>
 
@@ -286,12 +286,12 @@ export default function Home() {
           <button 
             onClick={() => setActiveTab('events')} 
             className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2 ${
-              activeTab === 'events' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-white'
+              activeTab === 'events' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-purple-600'
             }`}
           >
             <Calendar className="w-4 h-4" /> Events
             <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'events' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+              activeTab === 'events' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'
             }`}>
               {filteredEvents.length}
             </span>
@@ -300,12 +300,12 @@ export default function Home() {
           <button 
             onClick={() => setActiveTab('news')} 
             className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center gap-2 ${
-              activeTab === 'news' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-white'
+              activeTab === 'news' ? 'tab-active shadow-md' : 'text-slate-500 hover:text-purple-600'
             }`}
           >
             <Newspaper className="w-4 h-4" /> News
             <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${
-              activeTab === 'news' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+              activeTab === 'news' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'
             }`}>
               {filteredNews.length}
             </span>
@@ -322,7 +322,7 @@ export default function Home() {
                 className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition border ${
                   eventCategory === cat 
                     ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-white'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-purple-600'
                 }`}
               >
                 {cat}
@@ -338,7 +338,7 @@ export default function Home() {
                 className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition border ${
                   newsCategory === cat 
                     ? 'bg-purple-600 border-purple-600 text-white shadow-md' 
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-white'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-purple-600'
                 }`}
               >
                 {cat}
@@ -382,7 +382,6 @@ export default function Home() {
                     className="glass rounded-2xl overflow-hidden card-hover cursor-pointer flex flex-col h-full shadow-lg"
                     onClick={() => openModal(ev, 'event')}
                   >
-                    {/* Image */}
                     <div className="relative h-48 bg-gradient-to-br from-purple-600/20 to-pink-600/10 overflow-hidden">
                       {ev.image ? (
                         <img src={ev.image} alt={ev.title} className="w-full h-full object-cover opacity-80" />
@@ -391,14 +390,14 @@ export default function Home() {
                           <Calendar className="w-12 h-12 text-purple-600/30" />
                         </div>
                       )}
-                      <div className="absolute top-3 left-3 flex gap-2">
-                        <span className="badge badge-event uppercase text-[9px] px-2 py-0.5 rounded-full font-bold">Event</span>
-                        {ev.category && <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full font-bold">{ev.category}</span>}
-                      </div>
                     </div>
                     {/* Content */}
                     <div className="p-5 flex flex-col flex-grow">
-                      <h2 className="font-bold text-white text-lg leading-tight mb-2 line-clamp-2 hover:text-purple-300 transition-colors">
+                      <div className="flex gap-2 mb-2">
+                        <span className="badge badge-event uppercase text-[9px] px-2 py-0.5 rounded-full font-bold">Event</span>
+                        {ev.category && <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full font-bold">{ev.category}</span>}
+                      </div>
+                      <h2 className="font-bold text-slate-900 text-lg leading-tight mb-2 line-clamp-2 hover:text-purple-800 transition-colors">
                         {ev.title}
                       </h2>
                       <p className="text-slate-500 text-sm line-clamp-2 mb-4 flex-grow">
@@ -487,13 +486,13 @@ export default function Home() {
                           <Newspaper className="w-12 h-12 text-pink-600/30" />
                         </div>
                       )}
-                      <div className="absolute top-3 left-3 flex gap-2">
+                    </div>
+                    <div className="p-5 flex flex-col flex-grow">
+                      <div className="flex gap-2 mb-2">
                         <span className="badge badge-news uppercase text-[9px] px-2 py-0.5 rounded-full font-bold">News</span>
                         {item.category && <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full font-bold">{item.category}</span>}
                       </div>
-                    </div>
-                    <div className="p-5 flex flex-col flex-grow">
-                      <h2 className="font-bold text-white text-lg leading-tight mb-2 line-clamp-2 hover:text-pink-300 transition-colors">
+                      <h2 className="font-bold text-slate-900 text-lg leading-tight mb-2 line-clamp-2 hover:text-pink-800 transition-colors">
                         {item.title}
                       </h2>
                       <p className="text-slate-500 text-sm line-clamp-3 mb-4 flex-grow">
@@ -549,7 +548,7 @@ export default function Home() {
           onClick={() => setModal({ open: false, type: '', data: {} })}
         >
           <div 
-            className="glass rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-purple-500/20"
+            className="glass rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative border border-purple-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">
@@ -585,14 +584,14 @@ export default function Home() {
                 {(modal.data.tags || []).map(tag => (
                   <span 
                     key={tag} 
-                    className="badge text-[9px] px-2 py-0.5 rounded-full font-bold bg-indigo-900/20 text-indigo-300 border border-indigo-500/20"
+                    className="badge text-[9px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
                   >
                     #{tag}
                   </span>
                 ))}
               </div>
               
-              <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                 {modal.data.title}
               </h2>
               
@@ -662,7 +661,7 @@ export default function Home() {
               <div className="pt-2 text-center">
                 <Link 
                   href={`/${modal.type === 'event' ? 'events' : 'news'}/${modal.data._id}`}
-                  className="inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-semibold transition"
+                  className="inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-800 font-semibold transition"
                 >
                   Go to details & view comments <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
@@ -674,7 +673,7 @@ export default function Home() {
 
       {/* Copy Toast */}
       {showToast && (
-        <div className="toast-copy shadow-lg bg-white text-purple-300 border border-purple-500/30 flex items-center gap-2">
+        <div className="toast-copy shadow-lg bg-white text-purple-800 border border-purple-200 flex items-center gap-2">
           <span>🔗 Link copied to clipboard!</span>
         </div>
       )}

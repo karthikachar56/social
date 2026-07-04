@@ -71,13 +71,13 @@ export default function RegisterPage() {
           <p className="text-slate-500 text-xs mt-2">Create an account to join our community platform</p>
         </div>
 
-        <div className="glass rounded-2xl p-8 border border-purple-500/10 shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-1">Create Account</h2>
+        <div className="glass rounded-2xl p-8 border border-purple-100 shadow-2xl">
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Create Account</h2>
           <p className="text-slate-500 text-sm mb-6">Register to participate and write comments</p>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-950/20 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -129,7 +129,7 @@ export default function RegisterPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition text-xs font-semibold"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-purple-600 transition text-xs font-semibold"
                 >
                   {showPass ? 'Hide' : 'Show'}
                 </button>
@@ -170,7 +170,7 @@ export default function RegisterPage() {
           <div className="mt-6 pt-6 border-t border-slate-200/50 text-center text-xs">
             <p className="text-slate-500">
               Already have an account?{' '}
-              <Link href="/login" className="text-purple-400 hover:text-purple-300 font-semibold underline">
+              <Link href="/login" className="text-purple-400 hover:text-purple-800 font-semibold underline">
                 Sign In
               </Link>
             </p>
@@ -178,7 +178,7 @@ export default function RegisterPage() {
         </div>
 
         <p className="text-center mt-6 text-xs text-slate-600">
-          <Link href="/" className="inline-flex items-center gap-1.5 hover:text-white transition">
+          <Link href="/" className="inline-flex items-center gap-1.5 hover:text-purple-600 transition">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to EventHub
           </Link>
         </p>
