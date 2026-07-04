@@ -1527,8 +1527,12 @@ export default function AdminDashboard() {
                       <div key={u._id} className="p-4 sm:p-5 hover:bg-white/[0.01] transition">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md flex-shrink-0">
-                              {u.name ? u.name[0].toUpperCase() : 'U'}
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md flex-shrink-0 overflow-hidden">
+                              {u.avatar ? (
+                                <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{u.name ? u.name[0].toUpperCase() : 'U'}</span>
+                              )}
                             </div>
 
                             <div className="min-w-0">

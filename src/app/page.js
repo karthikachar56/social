@@ -517,8 +517,12 @@ export default function Home() {
                         <span className="text-xs text-slate-500">Logged in as</span>
                         <span className="text-sm font-semibold text-purple-800">{user.name}</span>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                        {user.name ? user.name[0].toUpperCase() : 'U'}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md overflow-hidden">
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{user.name ? user.name[0].toUpperCase() : 'U'}</span>
+                        )}
                       </div>
                     </button>
                     
