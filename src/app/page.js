@@ -18,7 +18,8 @@ import {
   LogOut,
   Sliders,
   CalendarX,
-  LayoutDashboard
+  LayoutDashboard,
+  KeyRound
 } from 'lucide-react';
 
 export default function Home() {
@@ -831,6 +832,16 @@ export default function Home() {
                   ) : 'Save Changes'}
                 </button>
               </form>
+
+              {/* Change Password Link */}
+              <div className="pt-4 text-center border-t border-slate-200/60">
+                <Link 
+                  href="/change-password"
+                  className="inline-flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-850 font-semibold transition"
+                >
+                  <KeyRound className="w-3.5 h-3.5" /> Change Account Password
+                </Link>
+              </div>
             </div>
           </div>
         </div>
