@@ -31,12 +31,14 @@ import {
   MessageSquare,
   Send,
   Camera,
-  Lock
+  Lock,
+  Download,
+  Share2
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user, role, token, loading: authLoading, logout, updateUser } = useAuth();
+  const { user, role, token, loading: authLoading, logout, updateUser, isLiked, toggleLike } = useAuth();
 
   // Navigation and data states
   const [page, setPage] = useState('dashboard');
@@ -47,6 +49,16 @@ export default function AdminDashboard() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [postsFilter, setPostsFilter] = useState('all');
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // Feed preview states
+  const [feedTab, setFeedTab] = useState('events'); // 'events' or 'news'
+  const [feedSearchQuery, setFeedSearchQuery] = useState('');
+  const [feedEventCategory, setFeedEventCategory] = useState('all');
+  const [feedNewsCategory, setFeedNewsCategory] = useState('all');
+  const [feedModal, setFeedModal] = useState({ open: false, type: '', data: {} });
+  const [feedModalComments, setFeedModalComments] = useState([]);
+  const [feedCommentInput, setFeedCommentInput] = useState('');
+  const [feedCommentSending, setFeedCommentSending] = useState(false);
 
   // Profile edit states
   const [profileForm, setProfileForm] = useState({ name: '', avatar: '', phone: '', otherDetails: '' });
@@ -180,6 +192,126 @@ export default function AdminDashboard() {
       chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, page]);
+
+  // Load feed comments when feed modal opens
+  useEffect(() => {
+    if (feedModal.open && feedModal.data?._id) {
+      fetchFeedComments(feedModal.data._id);
+    }
+  }, [feedModal.open, feedModal.data?._id]);
+
+  const fetchFeedComments = async (postId) => {
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setFeedModalComments(data);
+      }
+    } catch (e) {
+      console.error('Fetch feed comments error:', e);
+    }
+  };
+
+  const handleAddFeedComment = async (e) => {
+    e.preventDefault();
+    if (!feedCommentInput.trim() || feedCommentSending) return;
+
+    const content = feedCommentInput.trim();
+    setFeedCommentInput('');
+    setFeedCommentSending(true);
+
+    try {
+      const res = await fetch(`/api/posts/${feedModal.data._id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content,
+          postType: feedModal.type
+        })
+      });
+
+      if (res.ok) {
+        const newComm = await res.json();
+        setFeedModalComments(prev => [newComm, ...prev]);
+        
+        // Also update local comment count
+        if (feedModal.type === 'event') {
+          setEvents(events.map(ev => ev._id === feedModal.data._id ? { ...ev, commentsCount: (ev.commentsCount || 0) + 1 } : ev));
+        } else {
+          setNews(news.map(nw => nw._id === feedModal.data._id ? { ...nw, commentsCount: (nw.commentsCount || 0) + 1 } : nw));
+        }
+      }
+    } catch (e) {
+      console.error('Error posting comment:', e);
+    } finally {
+      setFeedCommentSending(false);
+    }
+  };
+
+  const handleFeedDownload = (item, e) => {
+    if (e) e.stopPropagation();
+    const itemType = item.date ? 'event' : 'news';
+    fetch(`/api/posts/${item._id}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'download', postType: itemType })
+    }).catch(err => console.error('Track download error:', err));
+
+    if (item.image) {
+      const a = document.createElement('a');
+      a.href = item.image;
+      a.download = item.title.replace(/\s+/g, '_') + '_image';
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const content = `${item.title}\n\n${item.description || item.content}\n\nPosted by: ${item.adminName}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = item.title.replace(/\s+/g, '_') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleFeedShare = async (item, e) => {
+    if (e) e.stopPropagation();
+    const itemType = item.date ? 'event' : 'news';
+    fetch(`/api/posts/${item._id}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'share', postType: itemType })
+    }).catch(err => console.error('Track share error:', err));
+
+    const url = window.location.origin + '/' + (feedModal.type || itemType) + '/' + item._id;
+    const shareData = {
+      title: item.title,
+      text: (item.summary || item.description || item.content || '').slice(0, 120) + '...',
+      url
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('🔗 Link copied to clipboard!', 'success');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   const fetchUnreadChats = async () => {
     try {
@@ -387,6 +519,7 @@ export default function AdminDashboard() {
 
   const pageTitle = {
     dashboard: 'Dashboard',
+    analytics: 'Analytics',
     'add-event': 'Create Event',
     'add-news': 'Publish News',
     'my-posts': 'All Posts',
@@ -396,7 +529,8 @@ export default function AdminDashboard() {
   }[page] || '';
 
   const pageSubtitle = {
-    dashboard: `Welcome back, ${user?.name || ''}`,
+    dashboard: `Browse published posts as users see them`,
+    analytics: `Detailed platform activity statistics`,
     'add-event': 'Fill in the details below',
     'add-news': 'Write and publish your article',
     'my-posts': 'Manage all events and news',
@@ -789,6 +923,10 @@ export default function AdminDashboard() {
           <button onClick={() => { setPage('dashboard'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'dashboard' ? 'active' : ''}`}>
             <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
           </button>
+
+          <button onClick={() => { setPage('analytics'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'analytics' ? 'active' : ''}`}>
+            <Activity className="w-4 h-4 flex-shrink-0" /> Analytics
+          </button>
           
           <button onClick={() => { setPage('add-event'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'add-event' ? 'active' : ''}`}>
             <CalendarPlus className="w-4 h-4 flex-shrink-0" /> Add Event
@@ -876,8 +1014,190 @@ export default function AdminDashboard() {
         {/* PAGE CONTENT */}
         <main className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto">
           
-          {/* ======================== DASHBOARD ======================== */}
+          {/* ======================== DASHBOARD (USER FEED VIEW) ======================== */}
           {page === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Search + Tab Switcher */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                {/* Search */}
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Search posts..." 
+                    value={feedSearchQuery}
+                    onChange={(e) => setFeedSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                {/* Tabs */}
+                <div className="flex bg-slate-105 p-1 rounded-xl border border-slate-200">
+                  <button 
+                    onClick={() => setFeedTab('events')} 
+                    className={`px-4 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 ${
+                      feedTab === 'events' ? 'bg-white text-purple-650 shadow-sm' : 'text-slate-500 hover:text-purple-650'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" /> Events
+                  </button>
+                  <button 
+                    onClick={() => setFeedTab('news')} 
+                    className={`px-4 py-1.5 rounded-lg font-bold text-xs transition flex items-center gap-1.5 ${
+                      feedTab === 'news' ? 'bg-white text-pink-650 shadow-sm' : 'text-slate-500 hover:text-pink-650'
+                    }`}
+                  >
+                    <Newspaper className="w-3.5 h-3.5" /> News
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Filters */}
+              {feedTab === 'events' ? (
+                <div className="flex flex-wrap gap-1.5 justify-start">
+                  {['all', ...new Set(events.map(e => e.category).filter(Boolean))].map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => setFeedEventCategory(cat)} 
+                      className={`px-3 py-1 rounded-full text-[11px] font-medium capitalize transition border ${
+                        feedEventCategory === cat 
+                          ? 'bg-purple-600 border-purple-600 text-white' 
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-purple-600'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 justify-start">
+                  {['all', ...new Set(news.map(n => n.category).filter(Boolean))].map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => setFeedNewsCategory(cat)} 
+                      className={`px-3 py-1 rounded-full text-[11px] font-medium capitalize transition border ${
+                        feedNewsCategory === cat 
+                          ? 'bg-purple-600 border-purple-600 text-white' 
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-purple-600/50 hover:text-purple-600'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Feed Grid */}
+              {feedTab === 'events' ? (
+                <div>
+                  {events.filter(e => {
+                    const q = feedSearchQuery.toLowerCase();
+                    const matchSearch = !q || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q);
+                    const matchCat = feedEventCategory === 'all' || e.category === feedEventCategory;
+                    return matchSearch && matchCat;
+                  }).length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+                      <p className="text-slate-500 text-xs font-semibold">No events found matching criteria</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {events
+                        .filter(e => {
+                          const q = feedSearchQuery.toLowerCase();
+                          const matchSearch = !q || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q);
+                          const matchCat = feedEventCategory === 'all' || e.category === feedEventCategory;
+                          return matchSearch && matchCat;
+                        })
+                        .map(ev => (
+                          <article 
+                            key={ev._id} 
+                            className="glass rounded-2xl overflow-hidden card-hover cursor-pointer flex flex-col h-full shadow-md bg-white border border-slate-200"
+                            onClick={() => setFeedModal({ open: true, type: 'event', data: ev })}
+                          >
+                            <div className="relative h-40 bg-slate-100 overflow-hidden">
+                              {ev.image ? (
+                                <img src={ev.image} alt={ev.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Calendar className="w-10 h-10 text-purple-600/20" />
+                                </div>
+                              )}
+                              <span className="absolute top-3 left-3 bg-purple-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
+                                Event
+                              </span>
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow">
+                              <span className="text-[10px] text-purple-600 font-bold uppercase tracking-wider mb-1">{ev.category}</span>
+                              <h3 className="font-bold text-slate-900 text-sm mb-2 line-clamp-1">{ev.title}</h3>
+                              <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed mb-4">{ev.description}</p>
+                              <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                                <span>🕒 {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                <span>👤 {ev.adminName}</span>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {news.filter(n => {
+                    const q = feedSearchQuery.toLowerCase();
+                    const matchSearch = !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+                    const matchCat = feedNewsCategory === 'all' || n.category === feedNewsCategory;
+                    return matchSearch && matchCat;
+                  }).length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+                      <p className="text-slate-500 text-xs font-semibold">No news articles found matching criteria</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {news
+                        .filter(n => {
+                          const q = feedSearchQuery.toLowerCase();
+                          const matchSearch = !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+                          const matchCat = feedNewsCategory === 'all' || n.category === feedNewsCategory;
+                          return matchSearch && matchCat;
+                        })
+                        .map(item => (
+                          <article 
+                            key={item._id} 
+                            className="glass rounded-2xl overflow-hidden card-hover cursor-pointer flex flex-col h-full shadow-md bg-white border border-slate-200"
+                            onClick={() => setFeedModal({ open: true, type: 'news', data: item })}
+                          >
+                            <div className="relative h-40 bg-slate-100 overflow-hidden">
+                              {item.image ? (
+                                <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Newspaper className="w-10 h-10 text-pink-600/20" />
+                                </div>
+                              )}
+                              <span className="absolute top-3 left-3 bg-pink-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
+                                News
+                              </span>
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow">
+                              <span className="text-[10px] text-pink-600 font-bold uppercase tracking-wider mb-1">{item.category}</span>
+                              <h3 className="font-bold text-slate-900 text-sm mb-2 line-clamp-1">{item.title}</h3>
+                              <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed mb-4">{item.summary || item.content}</p>
+                              <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                                <span>🕒 {timeAgo(item.createdAt)}</span>
+                                <span>👤 {item.adminName}</span>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================== ANALYTICS (STATS VIEW) ======================== */}
+          {page === 'analytics' && (
             <div className="space-y-6">
               {/* Stats */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -946,7 +1266,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Recent Activity */}
-              <div className="glass rounded-xl p-6 border border-purple-100">
+              <div className="glass rounded-xl p-6 border border-purple-100 bg-white">
                 <h2 className="font-bold text-slate-900 text-lg mb-4 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-purple-400" /> Recent Activity
                 </h2>
@@ -2159,6 +2479,175 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FEED DETAIL PREVIEW MODAL */}
+      {feedModal.open && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setFeedModal({ open: false, type: '', data: {} })}
+        >
+          <div 
+            className="glass rounded-2xl max-w-2xl w-full shadow-2xl relative border border-purple-200 overflow-hidden max-h-[90vh] flex flex-col bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header / Cover Image */}
+            <div className="relative h-48 sm:h-64 bg-slate-100 flex-shrink-0">
+              <button 
+                onClick={() => setFeedModal({ open: false, type: '', data: {} })}
+                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              
+              {feedModal.data.image ? (
+                <img src={feedModal.data.image} alt={feedModal.data.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900/40 to-pink-900/20">
+                  {feedModal.type === 'event' ? (
+                    <Calendar className="w-16 h-16 text-purple-650/30" />
+                  ) : (
+                    <Newspaper className="w-16 h-16 text-pink-650/30" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Scrollable details */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-grow">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`badge uppercase text-[10px] font-bold ${
+                  feedModal.type === 'event' ? 'badge-event' : 'badge-news'
+                }`}>
+                  {feedModal.type}
+                </span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  {feedModal.data.category}
+                </span>
+              </div>
+              
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">{feedModal.data.title}</h2>
+              
+              {/* Event specific details */}
+              {feedModal.type === 'event' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/50 text-xs text-slate-655">
+                  {feedModal.data.date && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Calendar className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                      <span>{new Date(feedModal.data.date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}{feedModal.data.time ? ` at ${feedModal.data.time}` : ''}</span>
+                    </div>
+                  )}
+                  {feedModal.data.location && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <MapPin className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                      <span>{feedModal.data.location}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <p className="text-slate-600 leading-relaxed whitespace-pre-line text-sm">
+                {feedModal.data.content || feedModal.data.description}
+              </p>
+              
+              <div className="pt-4 border-t border-slate-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                    {feedModal.data.adminName ? feedModal.data.adminName[0].toUpperCase() : 'A'}
+                  </div>
+                  <span className="font-semibold text-slate-700">{feedModal.data.adminName}</span>
+                  <span>•</span>
+                  <span>{feedModal.data.createdAt ? new Date(feedModal.data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}</span>
+                </div>
+                
+                {/* Modal Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <button 
+                    className={`action-btn px-4 py-2 border border-slate-200 rounded-xl hover:border-rose-500/50 flex items-center gap-1 text-xs transition ${
+                      isLiked(feedModal.data._id) ? 'text-pink-600 border-pink-200 bg-pink-50' : 'text-slate-500'
+                    }`}
+                    onClick={(e) => {
+                      if (e) e.stopPropagation();
+                      toggleLike(feedModal.data, feedModal.type).then(updatedLikes => {
+                        if (feedModal.type === 'event') {
+                          setEvents(events.map(ev => ev._id === feedModal.data._id ? { ...ev, likes: updatedLikes } : ev));
+                        } else {
+                          setNews(news.map(nw => nw._id === feedModal.data._id ? { ...nw, likes: updatedLikes } : nw));
+                        }
+                        setFeedModal(prev => ({ ...prev, data: { ...prev.data, likes: updatedLikes } }));
+                      });
+                    }}
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span>{feedModal.data.likes || 0} Likes</span>
+                  </button>
+                  
+                  <button 
+                    className="action-btn text-slate-500 hover:text-purple-500 border border-slate-200 p-2 rounded-xl transition" 
+                    onClick={() => handleFeedDownload(feedModal.data)}
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  
+                  <button 
+                    className="action-btn text-slate-500 hover:text-green-500 border border-slate-200 p-2 rounded-xl transition" 
+                    onClick={() => handleFeedShare(feedModal.data)}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div className="pt-6 border-t border-slate-200/50 space-y-4">
+                <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
+                  Comments
+                  <span className="text-[10px] font-normal bg-purple-900/10 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-full">
+                    {feedModalComments.length}
+                  </span>
+                </h3>
+
+                {/* Add Comment Input Form */}
+                <form onSubmit={handleAddFeedComment} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={feedCommentInput}
+                    onChange={(e) => setFeedCommentInput(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="input-field text-xs flex-grow"
+                    disabled={feedCommentSending}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!feedCommentInput.trim() || feedCommentSending}
+                    className="btn-primary px-4 py-2 rounded-xl text-xs flex items-center justify-center flex-shrink-0"
+                  >
+                    {feedCommentSending ? 'Post...' : 'Post'}
+                  </button>
+                </form>
+
+                {/* Comments List */}
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {feedModalComments.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">No comments yet.</p>
+                  ) : (
+                    feedModalComments.map(c => (
+                      <div key={c._id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span className="font-semibold text-slate-700">{c.authorName}</span>
+                          <span>{timeAgo(c.createdAt)}</span>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-normal">{c.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

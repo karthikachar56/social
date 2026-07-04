@@ -220,6 +220,19 @@ object EventHubApi {
         return JSONObject(apiRequest("/api/comments/$commentId", "DELETE", null, token))
     }
 
+    suspend fun postComment(token: String, postId: String, content: String, postType: String): JSONObject {
+        val body = JSONObject().apply {
+            put("content", content)
+            put("postType", postType)
+        }
+        return JSONObject(apiRequest("/api/posts/$postId/comments", "POST", body, token))
+    }
+
+    suspend fun toggleLike(token: String, postId: String, postType: String): JSONObject {
+        val typePath = if (postType == "event") "events" else "news"
+        return JSONObject(apiRequest("/api/$typePath/$postId/like", "POST", null, token))
+    }
+
     // User management
     suspend fun getUsers(token: String): JSONArray {
         return JSONArray(apiRequest("/api/admin/users", "GET", null, token))

@@ -12,11 +12,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -183,31 +187,37 @@ fun DashboardScreen(
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.AddCircle, contentDescription = "Create") },
-                    label = { Text("Create") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Feed") },
+                    label = { Text("Feed") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.List, contentDescription = "Posts") },
-                    label = { Text("Posts") }
+                    icon = { Icon(Icons.Default.Info, contentDescription = "Stats") },
+                    label = { Text("Stats") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Users") },
-                    label = { Text("Users") }
+                    icon = { Icon(Icons.Default.AddCircle, contentDescription = "Create") },
+                    label = { Text("Create") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
-                    icon = { Icon(Icons.Default.Send, contentDescription = "Chat") },
-                    label = { Text("Chat") }
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Manage") },
+                    label = { Text("Manage") }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Profile") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Chat") },
+                    label = { Text("Chat") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 5,
+                    onClick = { selectedTab = 5 },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                     label = { Text("Profile") }
                 )
             }
@@ -220,11 +230,12 @@ fun DashboardScreen(
                 .background(BackgroundColor)
         ) {
             when (selectedTab) {
-                0 -> CreateTab()
-                1 -> ManagePostsTab()
-                2 -> ManageUsersTab()
-                3 -> AdminChatTab()
-                4 -> AdminProfileTab(onLogout)
+                0 -> AdminDashboardTab()
+                1 -> AdminAnalyticsTab()
+                2 -> CreateTab()
+                3 -> AdminManageTab()
+                4 -> AdminChatTab()
+                5 -> AdminProfileTab(onLogout)
             }
         }
     }
@@ -966,7 +977,7 @@ fun AdminChatTab() {
                         },
                         colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFF6366F1))
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send")
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                     }
                 }
             }
@@ -1163,10 +1174,637 @@ fun AdminProfileTab(onLogout: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                 border = BorderStroke(1.dp, Color(0xFFFCA5A5))
             ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = "Log Out")
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Log Out")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Log Out", fontWeight = FontWeight.Bold)
             }
         }
     }
+}
+
+@Composable
+fun AdminManageTab() {
+    var manageType by remember { mutableStateOf(0) } // 0 = Posts, 1 = Users
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = manageType, containerColor = Color.White) {
+            Tab(selected = manageType == 0, onClick = { manageType = 0 }) {
+                Text("Manage Posts", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+            Tab(selected = manageType == 1, onClick = { manageType = 1 }) {
+                Text("Manage Users", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (manageType == 0) {
+                ManagePostsTab()
+            } else {
+                ManageUsersTab()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminDashboardTab() {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val token = remember { EventHubApi.getSessionToken(context) ?: "" }
+    val user = remember { EventHubApi.getSessionUser(context) }
+
+    var feedTab by remember { mutableStateOf(0) } // 0 = Events, 1 = News
+    var events by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var newsList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf("") }
+
+    // Filters states
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("All") }
+    val eventCategories = listOf("All", "General", "Academic", "Cultural", "Sports", "Tech")
+    val newsCategories = listOf("All", "General", "Tech", "Design", "Business", "Health", "Education")
+
+    // Preview state
+    var previewPost by remember { mutableStateOf<JSONObject?>(null) }
+    var previewPostType by remember { mutableStateOf("event") } // "event" or "news"
+    var previewComments by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var commentInput by remember { mutableStateOf("") }
+    var commentSending by remember { mutableStateOf(false) }
+
+    val fetchPosts = {
+        scope.launch {
+            try {
+                val evArray = EventHubApi.getEvents()
+                val evs = mutableListOf<JSONObject>()
+                for (i in 0 until evArray.length()) {
+                    evs.add(evArray.getJSONObject(i))
+                }
+                events = evs
+
+                val nwArray = EventHubApi.getNews()
+                val nws = mutableListOf<JSONObject>()
+                for (i in 0 until nwArray.length()) {
+                    nws.add(nwArray.getJSONObject(i))
+                }
+                newsList = nws
+            } catch (e: Exception) {
+                errorMsg = e.message ?: "Failed to load posts."
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        fetchPosts()
+    }
+
+    // Load comments when previewPost is set
+    LaunchedEffect(previewPost) {
+        if (previewPost != null) {
+            try {
+                val array = EventHubApi.getComments(previewPost!!.getString("_id"))
+                val list = mutableListOf<JSONObject>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getJSONObject(i))
+                }
+                previewComments = list
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    if (loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFF6366F1))
+        }
+    } else {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Tab switcher
+            TabRow(selectedTabIndex = feedTab, containerColor = Color.White) {
+                Tab(selected = feedTab == 0, onClick = { feedTab = 0; selectedCategory = "All" }) {
+                    Text("Community Events", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                Tab(selected = feedTab == 1, onClick = { feedTab = 1; selectedCategory = "All" }) {
+                    Text("Latest News", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search feed...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6366F1))
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Scrollable category row
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val cats = if (feedTab == 0) eventCategories else newsCategories
+                        items(cats) { cat ->
+                            CategoryChip(
+                                text = cat,
+                                selected = selectedCategory == cat,
+                                onClick = { selectedCategory = cat }
+                            )
+                        }
+                    }
+                }
+
+                if (feedTab == 0) {
+                    val filteredEvents = events.filter {
+                        (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+                        (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("description").contains(searchQuery, ignoreCase = true))
+                    }
+
+                    if (filteredEvents.isEmpty()) {
+                        item {
+                            Text("No events found.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                        }
+                    } else {
+                        items(filteredEvents) { ev ->
+                            FeedCard(
+                                title = ev.getString("title"),
+                                category = ev.getString("category"),
+                                image = ev.optString("image", ""),
+                                creator = ev.getString("adminName"),
+                                date = ev.getString("date"),
+                                typeLabel = "Event",
+                                onClick = {
+                                    previewPostType = "event"
+                                    previewPost = ev
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    val filteredNews = newsList.filter {
+                        (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+                        (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("content").contains(searchQuery, ignoreCase = true))
+                    }
+
+                    if (filteredNews.isEmpty()) {
+                        item {
+                            Text("No news updates found.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                        }
+                    } else {
+                        items(filteredNews) { ns ->
+                            FeedCard(
+                                title = ns.getString("title"),
+                                category = ns.getString("category"),
+                                image = ns.optString("image", ""),
+                                creator = ns.getString("adminName"),
+                                date = ns.optString("createdAt", ""),
+                                typeLabel = "News",
+                                onClick = {
+                                    previewPostType = "news"
+                                    previewPost = ns
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Detail Preview Modal Dialog
+    if (previewPost != null) {
+        val post = previewPost!!
+        AlertDialog(
+            onDismissRequest = { previewPost = null },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { previewPost = null }) {
+                    Text("Close", color = Color(0xFF6366F1))
+                }
+            },
+            title = {
+                Text(post.getString("title"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val imgUrl = post.optString("image", "")
+                    if (imgUrl.isNotEmpty()) {
+                        val imageModel = formatImageUrl(imgUrl)
+                        if (imageModel != null) {
+                            AsyncImage(
+                                model = imageModel,
+                                contentDescription = "Post Image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(160.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(post.getString("category").uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6366F1))
+                        Text(post.getString("adminName"), fontSize = 10.sp, color = Color.Gray)
+                    }
+
+                    Text(
+                        post.optString("description", post.optString("content", "")),
+                        fontSize = 12.sp,
+                        color = Color(0xFF334155),
+                        lineHeight = 18.sp
+                    )
+
+                    // Likes bar
+                    val isLiked = remember(post) {
+                        post.optInt("likes", 0)
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        val res = EventHubApi.toggleLike(token, post.getString("_id"), previewPostType)
+                                        val newLikes = res.getInt("likes")
+                                        val updatedPost = JSONObject(post.toString()).put("likes", newLikes)
+                                        previewPost = updatedPost
+                                        fetchPosts()
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFEEF2F6),
+                                contentColor = Color(0xFFDB2777)
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Favorite, contentDescription = "Likes", modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("$isLiked", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFEEF2F6))
+
+                    Text("Comments (${previewComments.size})", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+
+                    // Add comment form
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = commentInput,
+                            onValueChange = { commentInput = it },
+                            placeholder = { Text("Write a comment...", fontSize = 10.sp) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6366F1))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (commentInput.trim().isNotEmpty() && !commentSending) {
+                                    commentSending = true
+                                    scope.launch {
+                                        try {
+                                            val res = EventHubApi.postComment(token, post.getString("_id"), commentInput.trim(), previewPostType)
+                                            val array = EventHubApi.getComments(post.getString("_id"))
+                                            val list = mutableListOf<JSONObject>()
+                                            for (i in 0 until array.length()) {
+                                                list.add(array.getJSONObject(i))
+                                            }
+                                            previewComments = list
+                                            commentInput = ""
+                                            fetchPosts()
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        } finally {
+                                            commentSending = false
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1)),
+                            enabled = !commentSending,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Post", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Comments list
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.heightIn(max = 140.dp)
+                    ) {
+                        if (previewComments.isEmpty()) {
+                            Text("No comments yet.", fontSize = 11.sp, color = Color.Gray)
+                        } else {
+                            previewComments.forEach { c ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                    border = BorderStroke(1.dp, Color(0xFFEEF2F6))
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(c.getString("authorName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF334155))
+                                            Text(if (c.has("createdAt")) c.getString("createdAt").take(10) else "", fontSize = 8.sp, color = Color.Gray)
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(c.getString("content"), fontSize = 11.sp, color = Color(0xFF475569))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun AdminAnalyticsTab() {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val token = remember { EventHubApi.getSessionToken(context) ?: "" }
+    val user = remember { EventHubApi.getSessionUser(context) }
+    
+    var eventsCount by remember { mutableStateOf(0) }
+    var newsCount by remember { mutableStateOf(0) }
+    var usersCount by remember { mutableStateOf(0) }
+    var yourEventsCount by remember { mutableStateOf(0) }
+    var yourNewsCount by remember { mutableStateOf(0) }
+    var recentLogs by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            try {
+                val evArray = EventHubApi.getEvents()
+                val nwArray = EventHubApi.getNews()
+                val usrArray = EventHubApi.getUsers(token)
+                
+                eventsCount = evArray.length()
+                newsCount = nwArray.length()
+                usersCount = usrArray.length()
+
+                var myEvs = 0
+                val logsList = mutableListOf<JSONObject>()
+                for (i in 0 until evArray.length()) {
+                    val ev = evArray.getJSONObject(i)
+                    if (ev.optString("adminName") == user.name) myEvs++
+                    logsList.add(ev.apply { put("_type", "event") })
+                }
+                yourEventsCount = myEvs
+
+                var myNws = 0
+                for (i in 0 until nwArray.length()) {
+                    val nw = nwArray.getJSONObject(i)
+                    if (nw.optString("adminName") == user.name) myNws++
+                    logsList.add(nw.apply { put("_type", "news") })
+                }
+                yourNewsCount = myNws
+
+                logsList.sortByDescending { it.optString("createdAt", "") }
+                recentLogs = logsList.take(8)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    if (loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color(0xFF6366F1))
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text("Analytics Dashboard", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                Text("Platform overview and statistics", fontSize = 12.sp, color = Color(0xFF64748B))
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatsCard("Total Events", "$eventsCount", Color(0xFFEEF2F6), Color(0xFF4F46E5), modifier = Modifier.weight(1f))
+                        StatsCard("Total News", "$newsCount", Color(0xFFFDF2F8), Color(0xFFDB2777), modifier = Modifier.weight(1f))
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatsCard("Your Events", "$yourEventsCount", Color(0xFFFFF7ED), Color(0xFFD97706), modifier = Modifier.weight(1f))
+                        StatsCard("Your News", "$yourNewsCount", Color(0xFFECFDF5), Color(0xFF059669), modifier = Modifier.weight(1f))
+                    }
+                    StatsCard("Total Users", "$usersCount", Color(0xFFF0FDF4), Color(0xFF16A34A), modifier = Modifier.fillMaxWidth())
+                }
+            }
+
+            item {
+                Text("Recent Activity Log", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+            }
+
+            if (recentLogs.isEmpty()) {
+                item {
+                    Text("No activity log yet.", fontSize = 12.sp, color = Color.Gray)
+                }
+            } else {
+                items(recentLogs) { log ->
+                    ActivityLogItem(log)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatsCard(title: String, value: String, bgColor: Color, tintColor: Color, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        border = BorderStroke(1.dp, tintColor.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(title, fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = tintColor)
+        }
+    }
+}
+
+@Composable
+fun ActivityLogItem(log: JSONObject) {
+    val isEvent = log.optString("_type") == "event"
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEEF2F6))
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isEvent) Color(0xFFEEF2F6) else Color(0xFFFDF2F8)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isEvent) Icons.Default.DateRange else Icons.AutoMirrored.Filled.List,
+                    contentDescription = if (isEvent) "Event" else "News",
+                    tint = if (isEvent) Color(0xFF4F46E5) else Color(0xFFDB2777),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(log.getString("title"), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Text("${log.optString("adminName")} • ${log.optString("category")}", fontSize = 10.sp, color = Color(0xFF64748B))
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (isEvent) Color(0xFFEEF2F6) else Color(0xFFFDF2F8))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    if (isEvent) "EVENT" else "NEWS",
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isEvent) Color(0xFF4F46E5) else Color(0xFFDB2777)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.clickable { onClick() },
+        shape = RoundedCornerShape(50.dp),
+        color = if (selected) Color(0xFF6366F1) else Color(0xFFF1F5F9),
+        contentColor = if (selected) Color.White else Color(0xFF64748B),
+        border = BorderStroke(1.dp, if (selected) Color(0xFF6366F1) else Color(0xFFE2E8F0))
+    ) {
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+    }
+}
+
+@Composable
+fun FeedCard(title: String, category: String, image: String, creator: String, date: String, typeLabel: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEEF2F6))
+    ) {
+        Column {
+            if (image.isNotEmpty()) {
+                val imageModel = formatImageUrl(image)
+                if (imageModel != null) {
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = "Card Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (typeLabel == "Event") Color(0xFF8B5CF6) else Color(0xFFEC4899))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (typeLabel == "Event") Color(0xFFF3E8FF) else Color(0xFFFCE7F3))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(typeLabel.uppercase(), fontSize = 8.sp, fontWeight = FontWeight.Bold, color = if (typeLabel == "Event") Color(0xFF8B5CF6) else Color(0xFFEC4899))
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = Color(0xFFF1F5F9))
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("👤 $creator", fontSize = 10.sp, color = Color(0xFF64748B))
+                    Text("🕒 ${date.take(10)}", fontSize = 10.sp, color = Color(0xFF64748B))
+                }
+            }
+        }
+    }
+}
+
+fun formatImageUrl(url: String): Any? {
+    if (url.isBlank()) return ""
+    if (url.startsWith("data:image/") && url.contains(";base64,")) {
+        return try {
+            val base64String = url.substringAfter(";base64,")
+            android.util.Base64.decode(base64String, android.util.Base64.DEFAULT)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+        return url
+    }
+    return "https://social-eetirp.vercel.app" + if (url.startsWith("/")) url else "/$url"
 }
