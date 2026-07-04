@@ -215,10 +215,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !token) {
-      router.push('/login');
+    if (!authLoading) {
+      if (!token) {
+        router.push('/login');
+      } else if (role === 'user' && user && !user.phone) {
+        router.push('/profile-setup');
+      }
     }
-  }, [authLoading, token, router]);
+  }, [authLoading, token, role, user, router]);
 
   const fetchData = async () => {
     setLoading(true);

@@ -20,7 +20,7 @@ import {
 export default function EventDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, token, loading: authLoading, isLiked, toggleLike } = useAuth();
+  const { user, role, token, loading: authLoading, isLiked, toggleLike } = useAuth();
   
   const [event, setEvent] = useState(null);
   const [comments, setComments] = useState([]);
@@ -39,10 +39,14 @@ export default function EventDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!authLoading && !token) {
-      router.push('/login');
+    if (!authLoading) {
+      if (!token) {
+        router.push('/login');
+      } else if (role === 'user' && user && !user.phone) {
+        router.push('/profile-setup');
+      }
     }
-  }, [authLoading, token, router]);
+  }, [authLoading, token, role, user, router]);
 
   const fetchEventDetails = async () => {
     try {

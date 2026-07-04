@@ -42,7 +42,7 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, avatar } = await req.json();
+    const { name, avatar, phone } = await req.json();
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -60,7 +60,7 @@ export async function PUT(req) {
     } else {
       const updatedUser = await User.findByIdAndUpdate(
         decoded.id,
-        { name, avatar },
+        { name, avatar, phone },
         { new: true }
       ).select('-password');
       if (!updatedUser) {
