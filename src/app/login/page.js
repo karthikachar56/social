@@ -105,7 +105,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="name@example.com" 
                   required
-                  className="input-field pl-10 text-sm"
+                  className="input-field !pl-10 text-sm"
                 />
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="••••••••" 
                   required
-                  className="input-field pl-10 pr-10 text-sm"
+                  className="input-field !pl-10 !pr-10 text-sm"
                 />
                 <button 
                   type="button" 

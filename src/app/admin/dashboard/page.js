@@ -1508,7 +1508,7 @@ export default function AdminDashboard() {
                       value={userSearchQuery}
                       onChange={(e) => setUserSearchQuery(e.target.value)}
                       placeholder="Search users by Gmail or Name..."
-                      className="input-field pl-10 text-sm"
+                      className="input-field !pl-10 text-sm"
                     />
                   </div>
                 </div>

@@ -128,7 +128,7 @@ export default function ChangePassword() {
                   onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
                   placeholder="••••••••" 
                   required
-                  className="input-field pl-10 pr-10 text-sm"
+                  className="input-field !pl-10 !pr-10 text-sm"
                 />
                 <button 
                   type="button" 
@@ -150,7 +150,7 @@ export default function ChangePassword() {
                   onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
                   placeholder="••••••••" 
                   required
-                  className="input-field pl-10 pr-10 text-sm"
+                  className="input-field !pl-10 !pr-10 text-sm"
                 />
                 <button 
                   type="button" 
@@ -172,7 +172,7 @@ export default function ChangePassword() {
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                   placeholder="••••••••" 
                   required
-                  className="input-field pl-10 pr-10 text-sm"
+                  className="input-field !pl-10 !pr-10 text-sm"
                 />
                 <button 
                   type="button" 

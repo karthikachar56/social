@@ -94,7 +94,7 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="John Doe" 
                   required
-                  className="input-field pl-10 text-sm"
+                  className="input-field !pl-10 text-sm"
                 />
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="name@example.com" 
                   required
-                  className="input-field pl-10 text-sm"
+                  className="input-field !pl-10 text-sm"
                 />
               </div>
             </div>
@@ -124,7 +124,7 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="At least 6 characters" 
                   required
-                  className="input-field pl-10 pr-10 text-sm"
+                  className="input-field !pl-10 !pr-10 text-sm"
                 />
                 <button 
                   type="button" 
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                   placeholder="Re-enter password" 
                   required
-                  className="input-field pl-10 text-sm"
+                  className="input-field !pl-10 text-sm"
                 />
               </div>
             </div>

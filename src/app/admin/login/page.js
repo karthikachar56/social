@@ -143,7 +143,7 @@ export default function AdminLoginPage() {
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="admin@eventhub.com" 
                     required
-                    className="input-field pl-10 text-sm"
+                    className="input-field !pl-10 text-sm"
                   />
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function AdminLoginPage() {
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     placeholder="Enter your password" 
                     required
-                    className="input-field pl-10 pr-10 text-sm"
+                    className="input-field !pl-10 !pr-10 text-sm"
                   />
                   <button 
                     type="button" 
