@@ -29,12 +29,14 @@ import {
   MapPin,
   Search,
   MessageSquare,
-  Send
+  Send,
+  Camera,
+  Lock
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user, role, token, loading: authLoading, logout } = useAuth();
+  const { user, role, token, loading: authLoading, logout, updateUser } = useAuth();
 
   // Navigation and data states
   const [page, setPage] = useState('dashboard');
@@ -45,6 +47,94 @@ export default function AdminDashboard() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [postsFilter, setPostsFilter] = useState('all');
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // Profile edit states
+  const [profileForm, setProfileForm] = useState({ name: '', avatar: '', phone: '', otherDetails: '' });
+  const [profileUpdating, setProfileUpdating] = useState(false);
+  const [profileUploading, setProfileUploading] = useState(false);
+  const [profileMsg, setProfileMsg] = useState({ show: false, msg: '', type: 'success' });
+  const profileFileInputRef = useRef(null);
+
+  // Initialize profile form
+  useEffect(() => {
+    if (user && role === 'admin') {
+      setProfileForm({
+        name: user.name || '',
+        avatar: user.avatar || '',
+        phone: user.phone || '',
+        otherDetails: user.otherDetails || ''
+      });
+    }
+  }, [user, role]);
+
+  const handleProfileFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size should be less than 5MB.', 'error');
+      return;
+    }
+
+    setProfileUploading(true);
+    setProfileMsg({ show: false, msg: '', type: 'success' });
+
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: reader.result })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setProfileForm(prev => ({ ...prev, avatar: data.url }));
+            setProfileMsg({ show: true, msg: 'Photo uploaded successfully! Save changes to apply.', type: 'success' });
+          } else {
+            setProfileMsg({ show: true, msg: data.error || 'Failed to upload photo.', type: 'error' });
+          }
+        } catch (err) {
+          setProfileMsg({ show: true, msg: 'Photo upload failed. Connection error.', type: 'error' });
+        } finally {
+          setProfileUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setProfileMsg({ show: true, msg: 'Failed to read file.', type: 'error' });
+      setProfileUploading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileUpdating(true);
+    setProfileMsg({ show: false, msg: '', type: 'success' });
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        updateUser(data.user);
+        setProfileMsg({ show: true, msg: 'Profile updated successfully! 🎉', type: 'success' });
+      } else {
+        setProfileMsg({ show: true, msg: data.error || 'Failed to update profile.', type: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setProfileMsg({ show: true, msg: 'Network error. Try again.', type: 'error' });
+    } finally {
+      setProfileUpdating(false);
+    }
+  };
 
   // Chat States
   const [chatMessages, setChatMessages] = useState([]);
@@ -301,7 +391,8 @@ export default function AdminDashboard() {
     'add-news': 'Publish News',
     'my-posts': 'All Posts',
     'users': 'Manage Users',
-    'chat': 'Admin Chat'
+    'chat': 'Admin Chat',
+    'profile': 'Edit Profile'
   }[page] || '';
 
   const pageSubtitle = {
@@ -310,7 +401,8 @@ export default function AdminDashboard() {
     'add-news': 'Write and publish your article',
     'my-posts': 'Manage all events and news',
     'users': 'Suspend or reactivate user accounts',
-    'chat': 'Internal secure administrator discussion'
+    'chat': 'Internal secure administrator discussion',
+    'profile': 'Update your administrator information'
   }[page] || '';
 
   // File Upload Handlers (converts file to base64 string first)
@@ -728,6 +820,10 @@ export default function AdminDashboard() {
               </span>
             )}
           </button>
+
+          <button onClick={() => { setPage('profile'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'profile' ? 'active' : ''}`}>
+            <User className="w-4 h-4 flex-shrink-0" /> Edit Profile
+          </button>
         </nav>
 
         {/* Logout */}
@@ -755,8 +851,16 @@ export default function AdminDashboard() {
                 {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow shadow-purple-500/20 flex-shrink-0">
-              {user.name ? user.name[0].toUpperCase() : 'A'}
+            <div 
+              onClick={() => setPage('profile')}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow shadow-purple-500/20 flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-90 transition"
+              title="Edit Profile"
+            >
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{user.name ? user.name[0].toUpperCase() : 'A'}</span>
+              )}
             </div>
             
             <button 
@@ -1626,11 +1730,15 @@ export default function AdminDashboard() {
                                 : 'bg-transparent border-transparent text-slate-700 hover:bg-slate-200/50'
                             }`}
                           >
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                              isActive ? 'bg-purple-700 text-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
-                            }`}>
-                              {adm.name ? adm.name[0].toUpperCase() : 'A'}
-                            </div>
+                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 overflow-hidden ${
+                               isActive ? 'bg-purple-700 text-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                             }`}>
+                               {adm.avatar ? (
+                                 <img src={adm.avatar} alt={adm.name} className="w-full h-full object-cover" />
+                               ) : (
+                                 <span>{adm.name ? adm.name[0].toUpperCase() : 'A'}</span>
+                               )}
+                             </div>
                             <div className="min-w-0 flex-grow">
                               <p className={`font-semibold text-xs truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>
                                 {adm.name}
@@ -1656,9 +1764,17 @@ export default function AdminDashboard() {
                 <div className="flex-grow flex flex-col bg-white min-w-0 h-full">
                   {/* Active Chat Header */}
                   <div className="p-4 border-b border-slate-200 bg-purple-50/50 flex items-center gap-3 flex-shrink-0">
-                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 font-bold">
-                      {activeRecipient ? (activeRecipient.name ? activeRecipient.name[0].toUpperCase() : 'A') : <MessageSquare className="w-5 h-5" />}
-                    </div>
+                     <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 font-bold overflow-hidden">
+                       {activeRecipient ? (
+                         activeRecipient.avatar ? (
+                           <img src={activeRecipient.avatar} alt={activeRecipient.name} className="w-full h-full object-cover" />
+                         ) : (
+                           activeRecipient.name ? activeRecipient.name[0].toUpperCase() : 'A'
+                         )
+                       ) : (
+                         <MessageSquare className="w-5 h-5" />
+                       )}
+                     </div>
                     <div className="min-w-0">
                       <h2 className="font-bold text-slate-900 text-sm truncate">
                         {activeRecipient ? activeRecipient.name : 'Secure Internal Discussion'}
@@ -1721,6 +1837,136 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
+              </div>
+            </div>
+          )}
+
+          {/* ======================== EDIT PROFILE ======================== */}
+          {page === 'profile' && (
+            <div className="space-y-6 max-w-2xl mx-auto">
+              <div className="glass rounded-2xl border border-purple-100 bg-white p-6 sm:p-8 shadow-xl">
+                <div className="border-b border-slate-200/50 pb-5 mb-6 flex items-center gap-3">
+                  <User className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Admin Profile Settings</h2>
+                    <p className="text-xs text-slate-500 mt-1">Manage your administrative details and account presentation.</p>
+                  </div>
+                </div>
+
+                {/* Profile Photo */}
+                <div className="flex flex-col items-center mb-8">
+                  <div className="relative w-24 h-24 group">
+                    <div 
+                      onClick={() => profileFileInputRef.current?.click()}
+                      className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-4xl font-black shadow-lg cursor-pointer overflow-hidden border-4 border-white transition group-hover:opacity-90 relative"
+                    >
+                      {profileForm.avatar ? (
+                        <img src={profileForm.avatar} alt="Profile photo" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{user?.name ? user.name[0].toUpperCase() : 'A'}</span>
+                      )}
+                      {profileUploading && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => profileFileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 p-2 rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-750 transition"
+                      title="Upload profile photo"
+                    >
+                      <Camera className="w-4 h-4" />
+                    </button>
+                    <input 
+                      ref={profileFileInputRef}
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleProfileFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-slate-800 mt-3">{user?.name || 'Administrator'}</h3>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">System Administrator</p>
+                </div>
+
+                <form onSubmit={handleUpdateProfile} className="space-y-5">
+                  {profileMsg.show && (
+                    <div className={`px-4 py-3 rounded-xl text-xs font-semibold border ${
+                      profileMsg.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      {profileMsg.msg}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Display Name</label>
+                    <input 
+                      type="text" 
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      required
+                      className="input-field text-sm"
+                      placeholder="Enter display name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                    <div className="relative">
+                      <input 
+                        type="email" 
+                        value={user?.email || ''}
+                        disabled
+                        className="input-field bg-slate-100 text-slate-500 text-sm border-slate-200 cursor-not-allowed !pr-10"
+                        title="Email cannot be changed"
+                      />
+                      <Lock className="w-3.5 h-3.5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={profileForm.phone || ''}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      className="input-field text-sm"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Other Details</label>
+                    <textarea 
+                      value={profileForm.otherDetails || ''}
+                      onChange={(e) => setProfileForm({ ...profileForm, otherDetails: e.target.value })}
+                      rows={3}
+                      className="input-field text-sm"
+                      placeholder="Enter any additional details, roles, or description..."
+                    />
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={profileUpdating || profileUploading}
+                    className="btn-primary w-full justify-center flex items-center gap-2 mt-4"
+                  >
+                    {profileUpdating ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        Saving Changes...
+                      </>
+                    ) : 'Save Profile Details'}
+                  </button>
+                </form>
               </div>
             </div>
           )}

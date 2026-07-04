@@ -42,7 +42,7 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, avatar, phone } = await req.json();
+    const { name, avatar, phone, otherDetails } = await req.json();
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -50,7 +50,7 @@ export async function PUT(req) {
     if (decoded.role === 'admin') {
       const updatedAdmin = await Admin.findByIdAndUpdate(
         decoded.id,
-        { name, avatar },
+        { name, avatar, phone, otherDetails },
         { new: true }
       ).select('-password');
       if (!updatedAdmin) {
