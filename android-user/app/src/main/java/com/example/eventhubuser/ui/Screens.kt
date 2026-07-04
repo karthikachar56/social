@@ -410,7 +410,7 @@ fun ProfileSetupScreen(
                             scope.launch {
                                 try {
                                     loading = true
-                                    val base64 = uriToBase64(context, uri)
+                                    val base64 = uriToCompressedBase64(context, uri)
                                     val cloudUrl = EventHubApi.uploadPhoto(token, base64)
                                     avatarUrl = cloudUrl
                                     errorMsg = ""
@@ -1480,7 +1480,7 @@ fun ProfileTab(
                 try {
                     loading = true
                     msg = ""
-                    val base64 = uriToBase64(context, uri)
+                    val base64 = uriToCompressedBase64(context, uri)
                     val cloudUrl = EventHubApi.uploadPhoto(token, base64)
                     avatarUrl = cloudUrl
                     
@@ -2684,12 +2684,36 @@ fun CategoryChip(
     }
 }
 
-fun uriToBase64(context: Context, uri: android.net.Uri): String {
+fun uriToCompressedBase64(context: Context, uri: android.net.Uri): String {
     val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-    val bytes = inputStream?.readBytes()
+    val options = android.graphics.BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    android.graphics.BitmapFactory.decodeStream(inputStream, null, options)
     inputStream?.close()
-    return if (bytes != null) {
-        Base64.encodeToString(bytes, Base64.NO_WRAP)
-    } else ""
+
+    var scale = 1
+    val maxDimension = 1024
+    if (options.outWidth > maxDimension || options.outHeight > maxDimension) {
+        val maxVal = Math.max(options.outWidth, options.outHeight).toDouble()
+        scale = Math.pow(2.0, Math.ceil(Math.log(maxVal / maxDimension.toDouble()) / Math.log(2.0))).toInt()
+    }
+
+    val compressOptions = android.graphics.BitmapFactory.Options().apply {
+        inSampleSize = scale
+    }
+    
+    val inputStream2 = context.contentResolver.openInputStream(uri)
+    val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream2, null, compressOptions)
+    inputStream2?.close()
+
+    if (bitmap == null) return ""
+
+    val outputStream = java.io.ByteArrayOutputStream()
+    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
+    val bytes = outputStream.toByteArray()
+    bitmap.recycle()
+    
+    return Base64.encodeToString(bytes, Base64.NO_WRAP)
 }
 
