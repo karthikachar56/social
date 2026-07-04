@@ -592,7 +592,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900 relative">
+    <div className="h-screen flex bg-slate-50 text-slate-900 overflow-hidden relative">
       
       {/* MOBILE OVERLAY */}
       {mobileMenu && (
@@ -600,7 +600,7 @@ export default function AdminDashboard() {
       )}
 
       {/* SIDEBAR */}
-      <aside className={`sidebar w-64 flex-shrink-0 min-h-screen flex flex-col p-4 fixed md:sticky top-0 left-0 z-50 transform ${
+      <aside className={`sidebar w-64 flex-shrink-0 h-screen overflow-y-auto flex flex-col p-4 fixed md:sticky top-0 left-0 z-50 transform ${
         mobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       } transition-transform duration-200`}>
         {/* Logo */}
@@ -675,7 +675,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* MAIN CONTENT */}
-      <div className="flex-grow min-h-screen flex flex-col min-w-0 w-full pl-0 md:pl-0">
+      <div className="flex-grow h-screen overflow-y-auto flex flex-col min-w-0 w-full pl-0 md:pl-0">
         
         {/* TOP BAR */}
         <header className="sticky top-0 z-30 flex items-center gap-4 px-4 sm:px-6 h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md">
