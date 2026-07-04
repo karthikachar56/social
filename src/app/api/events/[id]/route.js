@@ -29,10 +29,16 @@ export async function PUT(req, { params }) {
     }
 
     const body = await req.json();
-    const updatedEvent = await Event.findByIdAndUpdate(id, body, { new: true });
-    if (!updatedEvent) {
+    const event = await Event.findById(id);
+    if (!event) {
       return NextResponse.json({ error: 'Event not found.' }, { status: 404 });
     }
+
+    if (event.adminId !== decoded.id) {
+      return NextResponse.json({ error: 'Unauthorized. You can only modify your own events.' }, { status: 403 });
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(id, body, { new: true });
     return NextResponse.json(updatedEvent);
   } catch (error) {
     console.error('Update event error:', error);
@@ -49,10 +55,16 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized. Admin role required.' }, { status: 403 });
     }
 
-    const deletedEvent = await Event.findByIdAndDelete(id);
-    if (!deletedEvent) {
+    const event = await Event.findById(id);
+    if (!event) {
       return NextResponse.json({ error: 'Event not found.' }, { status: 404 });
     }
+
+    if (event.adminId !== decoded.id) {
+      return NextResponse.json({ error: 'Unauthorized. You can only delete your own events.' }, { status: 403 });
+    }
+
+    await Event.findByIdAndDelete(id);
     
     // Clean up related comments
     await Comment.deleteMany({ postId: id, postType: 'event' });

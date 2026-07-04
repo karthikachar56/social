@@ -29,10 +29,16 @@ export async function PUT(req, { params }) {
     }
 
     const body = await req.json();
-    const updatedNews = await News.findByIdAndUpdate(id, body, { new: true });
-    if (!updatedNews) {
+    const item = await News.findById(id);
+    if (!item) {
       return NextResponse.json({ error: 'News article not found.' }, { status: 404 });
     }
+
+    if (item.adminId !== decoded.id) {
+      return NextResponse.json({ error: 'Unauthorized. You can only modify your own news articles.' }, { status: 403 });
+    }
+
+    const updatedNews = await News.findByIdAndUpdate(id, body, { new: true });
     return NextResponse.json(updatedNews);
   } catch (error) {
     console.error('Update news error:', error);
@@ -49,10 +55,16 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: 'Unauthorized. Admin role required.' }, { status: 403 });
     }
 
-    const deletedNews = await News.findByIdAndDelete(id);
-    if (!deletedNews) {
+    const item = await News.findById(id);
+    if (!item) {
       return NextResponse.json({ error: 'News article not found.' }, { status: 404 });
     }
+
+    if (item.adminId !== decoded.id) {
+      return NextResponse.json({ error: 'Unauthorized. You can only delete your own news articles.' }, { status: 403 });
+    }
+
+    await News.findByIdAndDelete(id);
     
     // Clean up related comments
     await Comment.deleteMany({ postId: id, postType: 'news' });
