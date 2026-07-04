@@ -21,7 +21,8 @@ import {
   LayoutDashboard,
   KeyRound,
   Bell,
-  CheckCheck
+  CheckCheck,
+  MessageSquare
 } from 'lucide-react';
 
 export default function Home() {
@@ -700,6 +701,16 @@ export default function Home() {
                             <span>{ev.likes || 0}</span>
                           </button>
                           
+                          {/* Comment */}
+                          <button 
+                            className="action-btn text-slate-500 hover:text-purple-600 flex items-center gap-1"
+                            onClick={(e) => { e.stopPropagation(); openModal(ev, 'event'); }}
+                            title="Comments"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>{ev.commentsCount || 0}</span>
+                          </button>
+                          
                           {/* Download */}
                           <button className="action-btn text-slate-500 hover:text-purple-400" onClick={(e) => downloadPost(ev, e)} title="Download details">
                             <Download className="w-3.5 h-3.5" />
@@ -779,6 +790,16 @@ export default function Home() {
                               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
                             <span>{item.likes || 0}</span>
+                          </button>
+                          
+                          {/* Comment */}
+                          <button 
+                            className="action-btn text-slate-500 hover:text-purple-600 flex items-center gap-1"
+                            onClick={(e) => { e.stopPropagation(); openModal(item, 'news'); }}
+                            title="Comments"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>{item.commentsCount || 0}</span>
                           </button>
                           
                           {/* Download */}
