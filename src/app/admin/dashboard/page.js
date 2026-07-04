@@ -166,6 +166,10 @@ export default function AdminDashboard() {
   const [toast, setToast] = useState({ show: false, msg: '', type: 'success' });
   const [deleteModal, setDeleteModal] = useState({ open: false, type: '', id: '', loading: false });
 
+  // Expanded comments for post manager
+  const [expandedComments, setExpandedComments] = useState({}); 
+  const [loadingComments, setLoadingComments] = useState({});
+
   // Upload progress indicators
   const [eventUploading, setEventUploading] = useState(false);
   const [newsUploading, setNewsUploading] = useState(false);
@@ -498,6 +502,59 @@ export default function AdminDashboard() {
       showToast('Network error during deletion.', 'error');
     } finally {
       setDeleteModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const toggleComments = async (postId) => {
+    if (expandedComments[postId]) {
+      setExpandedComments(prev => {
+        const copy = { ...prev };
+        delete copy[postId];
+        return copy;
+      });
+      return;
+    }
+
+    setLoadingComments(prev => ({ ...prev, [postId]: true }));
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpandedComments(prev => ({ ...prev, [postId]: data }));
+      }
+    } catch (e) {
+      console.error('Fetch comments error:', e);
+    } finally {
+      setLoadingComments(prev => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setExpandedComments(prev => ({
+          ...prev,
+          [postId]: prev[postId].filter(c => c._id !== commentId)
+        }));
+        
+        // Decrement local commentsCount
+        setEvents(prev => prev.map(ev => ev._id === postId ? { ...ev, commentsCount: Math.max(0, (ev.commentsCount || 1) - 1) } : ev));
+        setNews(prev => prev.map(nw => nw._id === postId ? { ...nw, commentsCount: Math.max(0, (nw.commentsCount || 1) - 1) } : nw));
+        
+        showToast('Comment deleted successfully!', 'success');
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to delete comment.', 'error');
+      }
+    } catch {
+      showToast('Network error.', 'error');
     }
   };
 
@@ -1181,10 +1238,51 @@ export default function AdminDashboard() {
 
                               <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500 border-t border-slate-200/40 pt-1.5 w-max">
                                 <span className="text-rose-500">❤️ {ev.likes || 0} Likes</span>
-                                <span className="text-purple-500">💬 {ev.commentsCount || 0} Comments</span>
+                                <button 
+                                  onClick={() => toggleComments(ev._id)}
+                                  className="text-purple-500 hover:underline flex items-center gap-0.5 transition cursor-pointer"
+                                >
+                                  💬 {ev.commentsCount || 0} Comments
+                                </button>
                                 <span className="text-emerald-500">🔗 {ev.shares || 0} Shares</span>
                                 <span className="text-blue-500">📥 {ev.downloads || 0} Downloads</span>
                               </div>
+
+                              {loadingComments[ev._id] && (
+                                <div className="mt-3 text-xs text-slate-500 animate-pulse">Loading comments...</div>
+                              )}
+
+                              {expandedComments[ev._id] && (
+                                <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200/50 rounded-xl space-y-3 max-h-64 overflow-y-auto">
+                                  <h4 className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">Comments List</h4>
+                                  {expandedComments[ev._id].length === 0 ? (
+                                    <p className="text-xs text-slate-500 py-2">No comments on this post yet.</p>
+                                  ) : (
+                                    <div className="space-y-2.5">
+                                      {expandedComments[ev._id].map(c => (
+                                        <div key={c._id} className="bg-white p-2.5 rounded-lg border border-slate-100 flex items-start justify-between gap-3">
+                                          <div className="space-y-1">
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                              <span className="font-bold text-slate-700">{c.authorName}</span>
+                                              <span>•</span>
+                                              <span>{timeAgo(c.createdAt)}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 leading-normal">{c.content}</p>
+                                          </div>
+                                          
+                                          <button
+                                            onClick={() => handleDeleteComment(ev._id, c._id)}
+                                            className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition flex-shrink-0"
+                                            title="Delete Comment"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             
                             <button 
@@ -1240,10 +1338,51 @@ export default function AdminDashboard() {
 
                               <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500 border-t border-slate-200/40 pt-1.5 w-max">
                                 <span className="text-rose-500">❤️ {item.likes || 0} Likes</span>
-                                <span className="text-purple-500">💬 {item.commentsCount || 0} Comments</span>
+                                <button 
+                                  onClick={() => toggleComments(item._id)}
+                                  className="text-purple-500 hover:underline flex items-center gap-0.5 transition cursor-pointer"
+                                >
+                                  💬 {item.commentsCount || 0} Comments
+                                </button>
                                 <span className="text-emerald-500">🔗 {item.shares || 0} Shares</span>
                                 <span className="text-blue-500">📥 {item.downloads || 0} Downloads</span>
                               </div>
+
+                              {loadingComments[item._id] && (
+                                <div className="mt-3 text-xs text-slate-500 animate-pulse">Loading comments...</div>
+                              )}
+
+                              {expandedComments[item._id] && (
+                                <div className="mt-4 p-3.5 bg-slate-50 border border-slate-200/50 rounded-xl space-y-3 max-h-64 overflow-y-auto">
+                                  <h4 className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">Comments List</h4>
+                                  {expandedComments[item._id].length === 0 ? (
+                                    <p className="text-xs text-slate-500 py-2">No comments on this post yet.</p>
+                                  ) : (
+                                    <div className="space-y-2.5">
+                                      {expandedComments[item._id].map(c => (
+                                        <div key={c._id} className="bg-white p-2.5 rounded-lg border border-slate-100 flex items-start justify-between gap-3">
+                                          <div className="space-y-1">
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                              <span className="font-bold text-slate-700">{c.authorName}</span>
+                                              <span>•</span>
+                                              <span>{timeAgo(c.createdAt)}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 leading-normal">{c.content}</p>
+                                          </div>
+                                          
+                                          <button
+                                            onClick={() => handleDeleteComment(item._id, c._id)}
+                                            className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition flex-shrink-0"
+                                            title="Delete Comment"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             
                             <button 
