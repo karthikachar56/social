@@ -24,6 +24,7 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      dbName: 'eventhub',
     };
 
     cached.promise = mongoose.connect(MONGO_URI, opts).then((mongooseInstance) => {
