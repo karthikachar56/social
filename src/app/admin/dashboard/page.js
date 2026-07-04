@@ -50,6 +50,8 @@ export default function AdminDashboard() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [admins, setAdmins] = useState([]);
+  const [activeRecipient, setActiveRecipient] = useState(null); // null means group chat
   const chatBottomRef = useRef(null);
 
   // Chat Polling Effect
@@ -62,7 +64,12 @@ export default function AdminDashboard() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [page, token]);
+  }, [page, token, activeRecipient]);
+
+  // Clear messages on switching chat targets
+  useEffect(() => {
+    setChatMessages([]);
+  }, [activeRecipient]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -73,7 +80,8 @@ export default function AdminDashboard() {
 
   const fetchChatMessages = async () => {
     try {
-      const res = await fetch('/api/admin/chat', {
+      const targetId = activeRecipient ? activeRecipient._id : 'group';
+      const res = await fetch(`/api/admin/chat?recipientId=${targetId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -102,7 +110,11 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ text: msgText })
+        body: JSON.stringify({ 
+          text: msgText,
+          recipientId: activeRecipient ? activeRecipient._id : null,
+          recipientName: activeRecipient ? activeRecipient.name : null
+        })
       });
       if (res.ok) {
         const newMsg = await res.json();
@@ -157,10 +169,15 @@ export default function AdminDashboard() {
   const loadAllData = async () => {
     setLoadingData(true);
     try {
-      const [evRes, nwRes, usrRes] = await Promise.all([
+      const [evRes, nwRes, usrRes, admRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/news'),
         fetch('/api/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }),
+        fetch('/api/admin/list', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -182,6 +199,11 @@ export default function AdminDashboard() {
       if (usrRes && usrRes.ok) {
         const usrData = await usrRes.json();
         setUsers(usrData);
+      }
+
+      if (admRes && admRes.ok) {
+        const admData = await admRes.json();
+        setAdmins(admData);
       }
     } catch (e) {
       console.error(e);
@@ -1262,66 +1284,147 @@ export default function AdminDashboard() {
           {/* ======================== ADMIN CHAT ======================== */}
           {page === 'chat' && (
             <div className="space-y-6">
-              <div className="glass rounded-2xl overflow-hidden border border-purple-200 flex flex-col h-[70vh]">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-200 bg-purple-50/50 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-purple-600" />
-                  <div>
-                    <h2 className="font-bold text-slate-900 text-sm">Secure Internal Discussion</h2>
-                    <p className="text-[10px] text-slate-500 font-medium">This channel is restricted to systems administrators only.</p>
+              <div className="glass rounded-2xl overflow-hidden border border-purple-200 flex flex-col md:flex-row h-[75vh]">
+                
+                {/* Admins Sidebar Panel */}
+                <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/50 flex flex-col min-w-0">
+                  <div className="p-4 border-b border-slate-200 bg-white">
+                    <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Conversations</h3>
+                  </div>
+                  
+                  <div className="flex-grow overflow-y-auto p-2 space-y-1">
+                    {/* Public Group Chat Option */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveRecipient(null)}
+                      className={`w-full text-left p-3 rounded-xl transition flex items-center gap-3 border ${
+                        activeRecipient === null
+                          ? 'bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-600/10'
+                          : 'bg-transparent border-transparent text-slate-700 hover:bg-slate-200/50'
+                      }`}
+                    >
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        activeRecipient === null ? 'bg-purple-700 text-white' : 'bg-purple-100 text-purple-600'
+                      }`}>
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-grow">
+                        <p className={`font-semibold text-xs truncate ${activeRecipient === null ? 'text-white' : 'text-slate-800'}`}>
+                          Global Admin Chat
+                        </p>
+                        <p className={`text-[10px] truncate ${activeRecipient === null ? 'text-purple-200' : 'text-slate-500'}`}>
+                          All administrators channel
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="px-3 py-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Direct Messages</p>
+                    </div>
+
+                    {admins
+                      .filter(adm => adm._id !== (user?.id || user?._id))
+                      .map(adm => {
+                        const isActive = activeRecipient?._id === adm._id;
+                        return (
+                          <button
+                            type="button"
+                            key={adm._id}
+                            onClick={() => setActiveRecipient(adm)}
+                            className={`w-full text-left p-3 rounded-xl transition flex items-center gap-3 border ${
+                              isActive
+                                ? 'bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-600/10'
+                                : 'bg-transparent border-transparent text-slate-700 hover:bg-slate-200/50'
+                            }`}
+                          >
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                              isActive ? 'bg-purple-700 text-white' : 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white'
+                            }`}>
+                              {adm.name ? adm.name[0].toUpperCase() : 'A'}
+                            </div>
+                            <div className="min-w-0 flex-grow">
+                              <p className={`font-semibold text-xs truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                                {adm.name}
+                              </p>
+                              <p className={`text-[10px] truncate ${isActive ? 'text-purple-200' : 'text-slate-500'}`}>
+                                {adm.email}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
 
                 {/* Messages Panel */}
-                <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-slate-50/30">
-                  {chatMessages.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-center text-slate-500 text-xs py-20">
-                      No messages in this chat. Start the conversation!
+                <div className="flex-grow flex flex-col bg-white min-w-0 h-full">
+                  {/* Active Chat Header */}
+                  <div className="p-4 border-b border-slate-200 bg-purple-50/50 flex items-center gap-3 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 font-bold">
+                      {activeRecipient ? (activeRecipient.name ? activeRecipient.name[0].toUpperCase() : 'A') : <MessageSquare className="w-5 h-5" />}
                     </div>
-                  ) : (
-                    chatMessages.map(msg => {
-                      const isMe = msg.senderId === (user?.id || user?._id);
-                      return (
-                        <div key={msg._id} className={`flex flex-col max-w-[75%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
-                          <span className="text-[10px] text-slate-500 font-bold mb-1 ml-1 px-0.5">
-                            {isMe ? 'You' : msg.senderName}
-                          </span>
-                          <div className={`p-3 rounded-2xl text-xs shadow-sm border ${
-                            isMe 
-                              ? 'bg-purple-600 text-white border-purple-500 rounded-tr-none' 
-                              : 'bg-white text-slate-800 border-slate-200 rounded-tl-none'
-                          }`}>
-                            <p className="leading-relaxed break-words">{msg.text}</p>
+                    <div className="min-w-0">
+                      <h2 className="font-bold text-slate-900 text-sm truncate">
+                        {activeRecipient ? activeRecipient.name : 'Secure Internal Discussion'}
+                      </h2>
+                      <p className="text-[10px] text-slate-500 font-medium truncate">
+                        {activeRecipient ? `Private Chat (${activeRecipient.email})` : 'This channel is restricted to systems administrators only.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Messages Scroll Panel */}
+                  <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-slate-50/30">
+                    {chatMessages.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-center text-slate-500 text-xs py-20">
+                        No messages in this chat. Start the conversation!
+                      </div>
+                    ) : (
+                      chatMessages.map(msg => {
+                        const isMe = msg.senderId === (user?.id || user?._id);
+                        return (
+                          <div key={msg._id} className={`flex flex-col max-w-[75%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                            <span className="text-[10px] text-slate-500 font-bold mb-1 ml-1 px-0.5">
+                              {isMe ? 'You' : msg.senderName}
+                            </span>
+                            <div className={`p-3 rounded-2xl text-xs shadow-sm border ${
+                              isMe 
+                                ? 'bg-purple-600 text-white border-purple-500 rounded-tr-none' 
+                                : 'bg-white text-slate-800 border-slate-200 rounded-tl-none'
+                            }`}>
+                              <p className="leading-relaxed break-words">{msg.text}</p>
+                            </div>
+                            <span className="text-[8px] text-slate-500 mt-1 ml-1 px-0.5">
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
-                          <span className="text-[8px] text-slate-500 mt-1 ml-1 px-0.5">
-                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={chatBottomRef} />
+                        );
+                      })
+                    )}
+                    <div ref={chatBottomRef} />
+                  </div>
+
+                  {/* Message Input Bar */}
+                  <form onSubmit={handleSendChatMessage} className="p-3 border-t border-slate-200 bg-white flex gap-2 flex-shrink-0">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={activeRecipient ? `Message ${activeRecipient.name}...` : 'Type your secure message...'}
+                      className="input-field text-xs flex-grow"
+                      disabled={chatSending}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim() || chatSending}
+                      className="btn-primary px-4 py-2 rounded-xl text-xs justify-center flex items-center gap-1.5 flex-shrink-0"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send</span>
+                    </button>
+                  </form>
                 </div>
 
-                {/* Input Bar */}
-                <form onSubmit={handleSendChatMessage} className="p-3 border-t border-slate-200 bg-white flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Type your secure message..."
-                    className="input-field text-xs flex-grow"
-                    disabled={chatSending}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!chatInput.trim() || chatSending}
-                    className="btn-primary px-4 py-2 rounded-xl text-xs justify-center flex items-center gap-1.5 flex-shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send</span>
-                  </button>
-                </form>
               </div>
             </div>
           )}
