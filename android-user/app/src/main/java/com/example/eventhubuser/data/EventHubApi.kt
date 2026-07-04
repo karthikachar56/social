@@ -54,6 +54,29 @@ object EventHubApi {
         prefs.edit().clear().apply()
     }
 
+    // Like local states mimicking web app localStorage
+    fun isLiked(context: Context, id: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()
+        return set.contains(id)
+    }
+
+    fun toggleLike(context: Context, id: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()
+        val newSet = set.toMutableSet()
+        val liked: Boolean
+        if (newSet.contains(id)) {
+            newSet.remove(id)
+            liked = false
+        } else {
+            newSet.add(id)
+            liked = true
+        }
+        prefs.edit().putStringSet("liked_posts", newSet).apply()
+        return liked
+    }
+
     // Generic Request helper using HttpURLConnection
     private suspend fun apiRequest(
         path: String,

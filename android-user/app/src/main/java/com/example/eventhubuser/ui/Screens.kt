@@ -559,9 +559,15 @@ fun DashboardScreen(
 @Composable
 fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var events by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf("") }
+
+    // Filters states matching web
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("All") }
+    val categories = listOf("All", "General", "Academic", "Cultural", "Sports", "Tech")
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -589,6 +595,12 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
             Text(errorMsg, color = Color(0xFFDC2626), textAlign = TextAlign.Center)
         }
     } else {
+        // Filter events
+        val filteredEvents = events.filter {
+            (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+            (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("description").contains(searchQuery, ignoreCase = true))
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -598,15 +610,41 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
                 Text("Upcoming Events", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Join and participate in active events", fontSize = 12.sp, color = Color(0xFF64748B))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search events...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Scrollable category row
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categories) { cat ->
+                        CategoryChip(
+                            text = cat,
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat }
+                        )
+                    }
+                }
             }
 
-            if (events.isEmpty()) {
+            if (filteredEvents.isEmpty()) {
                 item {
-                    Text("No events posted yet.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
+                    Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
                 }
             } else {
-                items(events) { ev ->
+                items(filteredEvents) { ev ->
                     EventCard(ev, onClick = { onNavigateToEventDetail(ev.getString("_id")) })
                 }
             }
@@ -616,6 +654,9 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
 
 @Composable
 fun EventCard(event: JSONObject, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -686,9 +727,33 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Favorite, contentDescription = "Likes", tint = Color(0xFFEC4899), modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${event.optInt("likes", 0)} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
+                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, event.getString("_id"))) }
+                    val likesCount = remember { mutableStateOf(event.optInt("likes", 0)) }
+                    IconButton(
+                        onClick = {
+                            val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                            scope.launch {
+                                val likedNow = EventHubApi.toggleLike(context, event.getString("_id"))
+                                isLiked.value = likedNow
+                                try {
+                                    val res = EventHubApi.toggleEventLike(token, event.getString("_id"))
+                                    likesCount.value = res.getInt("likes")
+                                } catch (e: Exception) {
+                                    likesCount.value = likesCount.value + if (likedNow) 1 else -1
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Likes",
+                            tint = if (isLiked.value) Color(0xFFEC4899) else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("${likesCount.value} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         }
@@ -698,9 +763,15 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
 @Composable
 fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var newsList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf("") }
+
+    // Filters states matching web
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("All") }
+    val categories = listOf("All", "General", "Announcement", "Urgent")
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -728,6 +799,12 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
             Text(errorMsg, color = Color(0xFFDC2626), textAlign = TextAlign.Center)
         }
     } else {
+        // Filter news list
+        val filteredNews = newsList.filter {
+            (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+            (it.getString("title").contains(searchQuery, ignoreCase = true) || it.optString("summary", "").contains(searchQuery, ignoreCase = true))
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -737,15 +814,41 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
                 Text("News Updates", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Stay informed with updates from our admins", fontSize = 12.sp, color = Color(0xFF64748B))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search news...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
+                )
+
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Scrollable category row
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categories) { cat ->
+                        CategoryChip(
+                            text = cat,
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat }
+                        )
+                    }
+                }
             }
 
-            if (newsList.isEmpty()) {
+            if (filteredNews.isEmpty()) {
                 item {
-                    Text("No news updates published yet.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
+                    Text("No news match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
                 }
             } else {
-                items(newsList) { ns ->
+                items(filteredNews) { ns ->
                     NewsCard(ns, onClick = { onNavigateToNewsDetail(ns.getString("_id")) })
                 }
             }
@@ -755,6 +858,9 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
 
 @Composable
 fun NewsCard(news: JSONObject, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -825,9 +931,33 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Favorite, contentDescription = "Likes", tint = Color(0xFFEC4899), modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${news.optInt("likes", 0)} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
+                    val isLiked = remember { mutableStateOf(EventHubApi.isLiked(context, news.getString("_id"))) }
+                    val likesCount = remember { mutableStateOf(news.optInt("likes", 0)) }
+                    IconButton(
+                        onClick = {
+                            val token = EventHubApi.getSessionToken(context) ?: return@IconButton
+                            scope.launch {
+                                val likedNow = EventHubApi.toggleLike(context, news.getString("_id"))
+                                isLiked.value = likedNow
+                                try {
+                                    val res = EventHubApi.toggleNewsLike(token, news.getString("_id"))
+                                    likesCount.value = res.getInt("likes")
+                                } catch (e: Exception) {
+                                    likesCount.value = likesCount.value + if (likedNow) 1 else -1
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isLiked.value) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Likes",
+                            tint = if (isLiked.value) Color(0xFFEC4899) else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text("${likesCount.value} Likes", fontSize = 11.sp, color = Color(0xFF64748B))
                 }
             }
         }
@@ -1272,10 +1402,12 @@ fun EventDetailScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
+                            val isLiked = EventHubApi.isLiked(context, eventId)
                             Button(
                                 onClick = {
                                     scope.launch {
                                         try {
+                                            EventHubApi.toggleLike(context, eventId)
                                             EventHubApi.toggleEventLike(token, eventId)
                                             loadDetails()
                                         } catch (e: Exception) {
@@ -1283,11 +1415,17 @@ fun EventDetailScreen(
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFCE7F3), contentColor = Color(0xFFEC4899)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                    contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                ),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.Favorite, contentDescription = "Like")
+                                Icon(
+                                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = "Like"
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("${ev.optInt("likes", 0)} Likes")
                             }
@@ -1485,10 +1623,12 @@ fun NewsDetailScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
+                            val isLiked = EventHubApi.isLiked(context, newsId)
                             Button(
                                 onClick = {
                                     scope.launch {
                                         try {
+                                            EventHubApi.toggleLike(context, newsId)
                                             EventHubApi.toggleNewsLike(token, newsId)
                                             loadDetails()
                                         } catch (e: Exception) {
@@ -1496,11 +1636,17 @@ fun NewsDetailScreen(
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFCE7F3), contentColor = Color(0xFFEC4899)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                    contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                ),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(Icons.Default.Favorite, contentDescription = "Like")
+                                Icon(
+                                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = "Like"
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("${ns.optInt("likes", 0)} Likes")
                             }
@@ -1579,3 +1725,25 @@ fun NewsDetailScreen(
         }
     }
 }
+
+@Composable
+fun CategoryChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (selected) Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
+        contentColor = if (selected) Color.White else Color(0xFF475569),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
+    }
+}
+
