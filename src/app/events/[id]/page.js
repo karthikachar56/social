@@ -20,7 +20,7 @@ import {
 export default function EventDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, token, isLiked, toggleLike } = useAuth();
+  const { user, token, loading: authLoading, isLiked, toggleLike } = useAuth();
   
   const [event, setEvent] = useState(null);
   const [comments, setComments] = useState([]);
@@ -37,6 +37,12 @@ export default function EventDetailPage() {
       fetchComments();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.push('/login');
+    }
+  }, [authLoading, token, router]);
 
   const fetchEventDetails = async () => {
     try {
@@ -178,6 +184,19 @@ export default function EventDetailPage() {
     if (!d) return '';
     return new Date(d).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
+
+  if (authLoading || !token) {
+    return (
+      <div className="min-h-screen bg-[#0F0F1A] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-purple-500/20 animate-pulse">
+            <Zap className="w-8 h-8 text-white fill-white" />
+          </div>
+          <p className="text-slate-400 text-sm font-semibold tracking-wider uppercase animate-pulse">Loading EventHub...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

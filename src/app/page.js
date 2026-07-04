@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Zap, 
@@ -22,6 +23,7 @@ import {
 
 export default function Home() {
   const { user, role, token, loading: authLoading, logout, isLiked, toggleLike } = useAuth();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState('events');
   const [loading, setLoading] = useState(true);
@@ -37,6 +39,12 @@ export default function Home() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.push('/login');
+    }
+  }, [authLoading, token, router]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -166,6 +174,19 @@ export default function Home() {
     if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
     return Math.floor(diff / 86400) + 'd ago';
   };
+
+  if (authLoading || !token) {
+    return (
+      <div className="min-h-screen bg-[#0F0F1A] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-purple-500/20 animate-pulse">
+            <Zap className="w-8 h-8 text-white fill-white" />
+          </div>
+          <p className="text-slate-400 text-sm font-semibold tracking-wider uppercase animate-pulse">Loading EventHub...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0F0F1A] text-[#E2E8F0] font-sans selection:bg-purple-600/40">
