@@ -26,7 +26,8 @@ import {
   CheckCircle,
   Eye,
   FileText,
-  MapPin
+  MapPin,
+  Search
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -41,6 +42,7 @@ export default function AdminDashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [postsFilter, setPostsFilter] = useState('all');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Submit states
   const [submitLoading, setSubmitLoading] = useState({ event: false, news: false });
@@ -1105,11 +1107,31 @@ export default function AdminDashboard() {
                   </span>
                 </div>
 
-                {users.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 text-sm">No registered users found.</div>
+                {/* User Search Input */}
+                <div className="p-4 border-b border-slate-200/50 bg-slate-50/50">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input 
+                      type="text"
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      placeholder="Search users by Gmail or Name..."
+                      className="input-field pl-10 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {users.filter(u => {
+                  const q = userSearchQuery.toLowerCase().trim();
+                  return !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+                }).length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-sm">No matching users found.</div>
                 ) : (
                   <div className="divide-y divide-slate-200/50 bg-slate-100/50">
-                    {users.map(u => (
+                    {users.filter(u => {
+                      const q = userSearchQuery.toLowerCase().trim();
+                      return !q || u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+                    }).map(u => (
                       <div key={u._id} className="p-4 sm:p-5 hover:bg-white/[0.01] transition">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4 min-w-0">
