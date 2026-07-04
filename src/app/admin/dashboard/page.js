@@ -27,7 +27,9 @@ import {
   Eye,
   FileText,
   MapPin,
-  Search
+  Search,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -43,6 +45,78 @@ export default function AdminDashboard() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [postsFilter, setPostsFilter] = useState('all');
   const [userSearchQuery, setUserSearchQuery] = useState('');
+
+  // Chat States
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatBottomRef = useRef(null);
+
+  // Chat Polling Effect
+  useEffect(() => {
+    let interval;
+    if (page === 'chat' && token) {
+      fetchChatMessages();
+      interval = setInterval(fetchChatMessages, 4000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [page, token]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (page === 'chat' && chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, page]);
+
+  const fetchChatMessages = async () => {
+    try {
+      const res = await fetch('/api/admin/chat', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data);
+      }
+    } catch (e) {
+      console.error('Fetch chat error:', e);
+    }
+  };
+
+  const handleSendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatSending) return;
+
+    const msgText = chatInput.trim();
+    setChatInput('');
+    setChatSending(true);
+
+    try {
+      const res = await fetch('/api/admin/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: msgText })
+      });
+      if (res.ok) {
+        const newMsg = await res.json();
+        setChatMessages(prev => [...prev, newMsg]);
+      } else {
+        showToast('Failed to send message.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error.', 'error');
+    } finally {
+      setChatSending(false);
+    }
+  };
 
   // Submit states
   const [submitLoading, setSubmitLoading] = useState({ event: false, news: false });
@@ -157,7 +231,8 @@ export default function AdminDashboard() {
     'add-event': 'Create Event',
     'add-news': 'Publish News',
     'my-posts': 'All Posts',
-    'users': 'Manage Users'
+    'users': 'Manage Users',
+    'chat': 'Admin Chat'
   }[page] || '';
 
   const pageSubtitle = {
@@ -165,7 +240,8 @@ export default function AdminDashboard() {
     'add-event': 'Fill in the details below',
     'add-news': 'Write and publish your article',
     'my-posts': 'Manage all events and news',
-    'users': 'Suspend or reactivate user accounts'
+    'users': 'Suspend or reactivate user accounts',
+    'chat': 'Internal secure administrator discussion'
   }[page] || '';
 
   // File Upload Handlers (converts file to base64 string first)
@@ -460,6 +536,10 @@ export default function AdminDashboard() {
             <span className="ml-auto text-[10px] bg-indigo-900/10 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-full">
               {users.length}
             </span>
+          </button>
+
+          <button onClick={() => { setPage('chat'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'chat' ? 'active' : ''}`}>
+            <MessageSquare className="w-4 h-4 flex-shrink-0" /> Admin Chat
           </button>
         </nav>
 
@@ -1175,6 +1255,73 @@ export default function AdminDashboard() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ======================== ADMIN CHAT ======================== */}
+          {page === 'chat' && (
+            <div className="space-y-6">
+              <div className="glass rounded-2xl overflow-hidden border border-purple-200 flex flex-col h-[70vh]">
+                {/* Header */}
+                <div className="p-4 border-b border-slate-200 bg-purple-50/50 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <h2 className="font-bold text-slate-900 text-sm">Secure Internal Discussion</h2>
+                    <p className="text-[10px] text-slate-500 font-medium">This channel is restricted to systems administrators only.</p>
+                  </div>
+                </div>
+
+                {/* Messages Panel */}
+                <div className="flex-grow p-4 overflow-y-auto space-y-4 bg-slate-50/30">
+                  {chatMessages.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-center text-slate-500 text-xs py-20">
+                      No messages in this chat. Start the conversation!
+                    </div>
+                  ) : (
+                    chatMessages.map(msg => {
+                      const isMe = msg.senderId === (user?.id || user?._id);
+                      return (
+                        <div key={msg._id} className={`flex flex-col max-w-[75%] ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                          <span className="text-[10px] text-slate-500 font-bold mb-1 ml-1 px-0.5">
+                            {isMe ? 'You' : msg.senderName}
+                          </span>
+                          <div className={`p-3 rounded-2xl text-xs shadow-sm border ${
+                            isMe 
+                              ? 'bg-purple-600 text-white border-purple-500 rounded-tr-none' 
+                              : 'bg-white text-slate-800 border-slate-200 rounded-tl-none'
+                          }`}>
+                            <p className="leading-relaxed break-words">{msg.text}</p>
+                          </div>
+                          <span className="text-[8px] text-slate-500 mt-1 ml-1 px-0.5">
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={chatBottomRef} />
+                </div>
+
+                {/* Input Bar */}
+                <form onSubmit={handleSendChatMessage} className="p-3 border-t border-slate-200 bg-white flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type your secure message..."
+                    className="input-field text-xs flex-grow"
+                    disabled={chatSending}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim() || chatSending}
+                    className="btn-primary px-4 py-2 rounded-xl text-xs justify-center flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send</span>
+                  </button>
+                </form>
               </div>
             </div>
           )}
