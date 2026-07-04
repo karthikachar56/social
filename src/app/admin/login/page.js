@@ -183,33 +183,6 @@ export default function AdminLoginPage() {
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
             </form>
-
-            {/* Quick Login Credentials */}
-            <div className="mt-8 pt-6 border-t border-slate-200/50">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Quick Login — Demo Admins</p>
-              <div className="grid grid-cols-2 gap-2">
-                {demoAdmins.map(admin => (
-                  <button 
-                    key={admin.email}
-                    onClick={() => quickLogin(admin)} 
-                    className="text-left px-3 py-2 rounded-lg border border-slate-200 hover:border-purple-600 hover:bg-purple-900/10 transition group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-                        {admin.name[0]}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 truncate group-hover:text-purple-600 transition">{admin.name}</p>
-                        <p className="text-[9px] text-slate-600 truncate">{admin.email}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[9px] text-slate-600 mt-3 text-center">
-                All demo accounts use password: <span className="text-slate-500 font-mono">admin123</span>
-              </p>
-            </div>
           </div>
 
           <p className="text-center text-sm text-slate-600 mt-6">
