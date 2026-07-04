@@ -24,7 +24,8 @@ import {
   CheckCheck,
   MessageSquare,
   Camera,
-  Phone
+  Phone,
+  Lock
 } from 'lucide-react';
 
 export default function Home() {
@@ -1173,15 +1174,27 @@ export default function Home() {
 
                 {role === 'user' && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
-                    <input 
-                      type="tel" 
-                      value={profileForm.phone || ''}
-                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      required
-                      className="input-field text-sm"
-                      placeholder="Enter your phone number"
-                    />
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                      Phone Number {user.phone ? '(Locked)' : ''}
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="tel" 
+                        value={profileForm.phone || ''}
+                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        disabled={!!user.phone}
+                        className={`input-field text-sm ${
+                          user.phone 
+                            ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed !pr-10' 
+                            : ''
+                        }`}
+                        placeholder="Enter your phone number"
+                        required
+                      />
+                      {!!user.phone && (
+                        <Lock className="w-3.5 h-3.5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      )}
+                    </div>
                   </div>
                 )}
 

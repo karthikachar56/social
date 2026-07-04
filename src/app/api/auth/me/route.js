@@ -58,14 +58,23 @@ export async function PUT(req) {
       }
       return NextResponse.json({ role: 'admin', user: updatedAdmin });
     } else {
-      const updatedUser = await User.findByIdAndUpdate(
-        decoded.id,
-        { name, avatar, phone },
-        { new: true }
-      ).select('-password');
-      if (!updatedUser) {
+      const existingUser = await User.findById(decoded.id);
+      if (!existingUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
+
+      const updateFields = { name, avatar };
+      if (!existingUser.phone && phone) {
+        updateFields.phone = phone;
+      } else if (existingUser.phone && phone && existingUser.phone !== phone) {
+        return NextResponse.json({ error: 'Phone number cannot be modified once set.' }, { status: 400 });
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        decoded.id,
+        updateFields,
+        { new: true }
+      ).select('-password');
       return NextResponse.json({ role: 'user', user: updatedUser });
     }
   } catch (error) {
