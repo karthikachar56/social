@@ -1031,15 +1031,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Link to Full Page with Comments */}
-              <div className="pt-2 text-center">
-                <Link 
-                  href={`/${modal.type === 'event' ? 'events' : 'news'}/${modal.data._id}`}
-                  className="inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-800 font-semibold transition"
-                >
-                  Go to details & view comments <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
+
             </div>
           </div>
         </div>
