@@ -23,6 +23,9 @@ export async function GET(req) {
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
+      if (user.banned) {
+        return NextResponse.json({ error: 'Account suspended.' }, { status: 403 });
+      }
       return NextResponse.json({ role: 'user', user });
     }
   } catch (error) {

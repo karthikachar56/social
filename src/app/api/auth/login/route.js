@@ -36,6 +36,9 @@ export async function POST(req) {
     // Check if logging in as regular User
     let user = await User.findOne({ email: cleanEmail });
     if (user) {
+      if (user.banned) {
+        return NextResponse.json({ error: 'Your account has been suspended by an administrator.' }, { status: 403 });
+      }
       const ok = await bcrypt.compare(password, user.password);
       if (!ok) {
         return NextResponse.json({ error: 'Incorrect password.' }, { status: 400 });

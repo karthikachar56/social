@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [page, setPage] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [news, setNews] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [postsFilter, setPostsFilter] = useState('all');
@@ -80,9 +81,14 @@ export default function AdminDashboard() {
   const loadAllData = async () => {
     setLoadingData(true);
     try {
-      const [evRes, nwRes] = await Promise.all([
+      const [evRes, nwRes, usrRes] = await Promise.all([
         fetch('/api/events'),
-        fetch('/api/news')
+        fetch('/api/news'),
+        fetch('/api/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       ]);
 
       if (evRes.ok && nwRes.ok) {
@@ -91,11 +97,42 @@ export default function AdminDashboard() {
         setEvents(evData);
         setNews(nwData);
       }
+
+      if (usrRes && usrRes.ok) {
+        const usrData = await usrRes.json();
+        setUsers(usrData);
+      }
     } catch (e) {
       console.error(e);
       showToast('Failed to load dashboard data.', 'error');
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const handleToggleBan = async (userToUpdate) => {
+    const newBannedStatus = !userToUpdate.banned;
+    try {
+      const res = await fetch(`/api/admin/users/${userToUpdate._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ banned: newBannedStatus })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers(prev => prev.map(u => u._id === userToUpdate._id ? data : u));
+        showToast(
+          `User "${userToUpdate.name}" has been ${newBannedStatus ? 'suspended' : 'reactivated'} successfully!`, 
+          newBannedStatus ? 'error' : 'success'
+        );
+      } else {
+        showToast(data.error || 'Failed to update user status.', 'error');
+      }
+    } catch {
+      showToast('Network error. Try again.', 'error');
     }
   };
 
@@ -112,14 +149,16 @@ export default function AdminDashboard() {
     dashboard: 'Dashboard',
     'add-event': 'Create Event',
     'add-news': 'Publish News',
-    'my-posts': 'All Posts'
+    'my-posts': 'All Posts',
+    'users': 'Manage Users'
   }[page] || '';
 
   const pageSubtitle = {
     dashboard: `Welcome back, ${user?.name || ''}`,
     'add-event': 'Fill in the details below',
     'add-news': 'Write and publish your article',
-    'my-posts': 'Manage all events and news'
+    'my-posts': 'Manage all events and news',
+    'users': 'Suspend or reactivate user accounts'
   }[page] || '';
 
   // File Upload Handlers (converts file to base64 string first)
@@ -406,6 +445,13 @@ export default function AdminDashboard() {
             <List className="w-4 h-4 flex-shrink-0" /> All Posts
             <span className="ml-auto text-[10px] bg-purple-900/30 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-full">
               {events.length + news.length}
+            </span>
+          </button>
+
+          <button onClick={() => { setPage('users'); setMobileMenu(false); }} className={`nav-item w-full ${page === 'users' ? 'active' : ''}`}>
+            <User className="w-4 h-4 flex-shrink-0" /> Manage Users
+            <span className="ml-auto text-[10px] bg-indigo-900/10 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded-full">
+              {users.length}
             </span>
           </button>
         </nav>
@@ -967,7 +1013,7 @@ export default function AdminDashboard() {
                             
                             <div className="flex-grow min-w-0">
                               <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-white text-sm truncate">{ev.title}</h3>
+                                <h3 className="font-semibold text-slate-900 text-sm truncate">{ev.title}</h3>
                                 <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full">{ev.category}</span>
                               </div>
                               <p className="text-xs text-slate-500 line-clamp-1 mb-2">{ev.description}</p>
@@ -1021,7 +1067,7 @@ export default function AdminDashboard() {
                             
                             <div className="flex-grow min-w-0">
                               <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-white text-sm truncate">{item.title}</h3>
+                                <h3 className="font-semibold text-slate-900 text-sm truncate">{item.title}</h3>
                                 <span className="badge badge-cat text-[9px] px-2 py-0.5 rounded-full">{item.category}</span>
                               </div>
                               <p className="text-xs text-slate-500 line-clamp-1 mb-2">{item.summary || item.content}</p>
@@ -1044,6 +1090,65 @@ export default function AdminDashboard() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ======================== USER MANAGEMENT ======================== */}
+          {page === 'users' && (
+            <div className="space-y-6">
+              <div className="glass rounded-2xl overflow-hidden border border-indigo-100">
+                <div className="p-5 border-b border-slate-200/50 flex items-center gap-2">
+                  <User className="w-5 h-5 text-indigo-500" />
+                  <h2 className="font-bold text-slate-900">Registered Users</h2>
+                  <span className="text-xs bg-indigo-900/10 text-indigo-800 border border-indigo-200 px-2.5 py-0.5 rounded-full ml-auto">
+                    {users.length} users total
+                  </span>
+                </div>
+
+                {users.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 text-sm">No registered users found.</div>
+                ) : (
+                  <div className="divide-y divide-slate-200/50 bg-slate-100/50">
+                    {users.map(u => (
+                      <div key={u._id} className="p-4 sm:p-5 hover:bg-white/[0.01] transition">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md flex-shrink-0">
+                              {u.name ? u.name[0].toUpperCase() : 'U'}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-slate-800 text-sm truncate">{u.name}</h3>
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
+                                  u.banned 
+                                    ? 'bg-red-50 text-red-800 border-red-200' 
+                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                }`}>
+                                  {u.banned ? 'Suspended' : 'Active'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                              <p className="text-[10px] text-slate-500 mt-1">Joined {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleToggleBan(u)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                              u.banned
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                            }`}
+                          >
+                            {u.banned ? 'Reactivate' : 'Suspend'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
