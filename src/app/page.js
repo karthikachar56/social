@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -22,7 +22,9 @@ import {
   KeyRound,
   Bell,
   CheckCheck,
-  MessageSquare
+  MessageSquare,
+  Camera,
+  Phone
 } from 'lucide-react';
 
 export default function Home() {
@@ -168,15 +170,59 @@ export default function Home() {
 
   // User Profile States
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: '', avatar: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', avatar: '', phone: '' });
   const [profileUpdating, setProfileUpdating] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ show: false, msg: '', type: 'success' });
+  const profileFileInputRef = useRef(null);
+  const [profileUploading, setProfileUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
-      setProfileForm({ name: user.name || '', avatar: user.avatar || '' });
+      setProfileForm({ name: user.name || '', avatar: user.avatar || '', phone: user.phone || '' });
     }
   }, [user, profileOpen]);
+
+  const handleProfileFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileMsg({ show: true, msg: 'File is too large. Max size is 5MB.', type: 'error' });
+      return;
+    }
+
+    setProfileUploading(true);
+    setProfileMsg({ show: false, msg: '', type: 'success' });
+    
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Data = event.target.result;
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Data })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setProfileForm(prev => ({ ...prev, avatar: data.url }));
+            setProfileMsg({ show: true, msg: 'Photo updated! ✓', type: 'success' });
+          } else {
+            setProfileMsg({ show: true, msg: data.error || 'Failed to upload photo.', type: 'error' });
+          }
+        } catch (err) {
+          setProfileMsg({ show: true, msg: 'Photo upload failed. Connection error.', type: 'error' });
+        } finally {
+          setProfileUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setProfileMsg({ show: true, msg: 'Failed to read file.', type: 'error' });
+      setProfileUploading(false);
+    }
+  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -1038,12 +1084,43 @@ export default function Home() {
             >
               <X className="w-4 h-4" />
             </button>
-
             {/* Profile Content */}
             <div className="space-y-6">
               <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-3xl font-black shadow-lg mx-auto mb-3">
-                  {user.name ? user.name[0].toUpperCase() : 'U'}
+                <div className="relative w-20 h-20 mx-auto mb-3 group">
+                  <div 
+                    onClick={() => profileFileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-3xl font-black shadow-lg cursor-pointer overflow-hidden border-2 border-white transition group-hover:opacity-90 relative"
+                  >
+                    {profileForm.avatar ? (
+                      <img src={profileForm.avatar} alt="Profile photo" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{user.name ? user.name[0].toUpperCase() : 'U'}</span>
+                    )}
+                    {profileUploading && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => profileFileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-1.5 rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-750 transition"
+                    title="Change profile photo"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                  <input 
+                    ref={profileFileInputRef}
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleProfileFileChange}
+                    className="hidden"
+                  />
                 </div>
                 <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
                 <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">
@@ -1098,15 +1175,29 @@ export default function Home() {
                   />
                 </div>
 
+                {role === 'user' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={profileForm.phone || ''}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      required
+                      className="input-field text-sm"
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+                )}
+
                 <button 
                   type="submit" 
-                  disabled={profileUpdating}
+                  disabled={profileUpdating || profileUploading}
                   className="btn-primary w-full justify-center flex items-center gap-2 mt-2"
                 >
                   {profileUpdating ? (
                     <>
                       <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                       </svg>
                       Updating...
