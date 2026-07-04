@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -583,7 +584,7 @@ fun DashboardScreen(
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.List, contentDescription = "News") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "News") },
                     label = { Text("News") }
                 )
                 NavigationBarItem(
@@ -820,7 +821,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = Color(0xFFF1F5F9))
+                HorizontalDivider(color = Color(0xFFF1F5F9))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -864,7 +865,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Comment,
+                                imageVector = Icons.AutoMirrored.Filled.Comment,
                                 contentDescription = "Comments",
                                 tint = Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
@@ -1172,7 +1173,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = Color(0xFFF1F5F9))
+                HorizontalDivider(color = Color(0xFFF1F5F9))
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -1216,7 +1217,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Comment,
+                                imageVector = Icons.AutoMirrored.Filled.Comment,
                                 contentDescription = "Comments",
                                 tint = Color(0xFF64748B),
                                 modifier = Modifier.size(18.dp)
@@ -1461,9 +1462,9 @@ fun ProfileTab(
     val token = remember { EventHubApi.getSessionToken(context) ?: "" }
     var user by remember { mutableStateOf(EventHubApi.getSessionUser(context)) }
 
-    var nameInput by remember { mutableStateOf(user.name) }
-    var phoneInput by remember { mutableStateOf(user.phone) }
-    var avatarUrl by remember { mutableStateOf(user.avatar) }
+    var nameInput by remember(user) { mutableStateOf(user.name) }
+    var phoneInput by remember(user) { mutableStateOf(user.phone) }
+    var avatarUrl by remember(user) { mutableStateOf(user.avatar) }
     var msg by remember { mutableStateOf("") }
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
@@ -1904,7 +1905,7 @@ fun ProfileTab(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
                 border = BorderStroke(1.dp, Color(0xFFFCA5A5))
             ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = "Log Out")
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Log Out")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Log Out", fontWeight = FontWeight.Bold)
             }
@@ -1967,7 +1968,7 @@ fun EventDetailScreen(
                 title = { Text("Event Details", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -2315,7 +2316,7 @@ fun NewsDetailScreen(
                 title = { Text("News Update", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -2633,7 +2634,7 @@ fun EventHubHeroHeader(
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = Color(0xFFF1F5F9))
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
