@@ -100,8 +100,8 @@ fun LoginScreen(
                 Icon(Icons.Default.Lock, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(36.dp))
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text("EventHub Admin", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Secure Management Console", fontSize = 14.sp, color = Color(0xFF64748B))
+            Text("EventHub Admin", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Secure Management Console", fontSize = 14.sp, color = SubtitleTextColor)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -112,7 +112,7 @@ fun LoginScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                    Text("Admin Login", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Admin Login", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (errorMsg.isNotEmpty()) {
@@ -327,8 +327,8 @@ fun CreateTab() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Publish Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Post announcement alerts directly to community portal", fontSize = 12.sp, color = Color(0xFF64748B))
+            Text("Publish Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Post announcement alerts directly to community portal", fontSize = 12.sp, color = SubtitleTextColor)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -441,7 +441,7 @@ fun CreateTab() {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("Cover Image", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Cover Image", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Image Preview Area
@@ -533,7 +533,7 @@ fun CreateTab() {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Preset Cover Image Selector
-                    Text("Select Preset Cover Image", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+                    Text("Select Preset Cover Image", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     Spacer(modifier = Modifier.height(6.dp))
                     androidx.compose.foundation.lazy.LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -561,7 +561,7 @@ fun CreateTab() {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     Spacer(modifier = Modifier.height(4.dp))
                     val categories = if (activeFormType == 0) {
                         listOf("General", "Academic", "Cultural", "Sports", "Tech")
@@ -791,12 +791,12 @@ fun ManagePostsTab() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Manage Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text("Delete posts and delete comments", fontSize = 12.sp, color = Color(0xFF64748B))
+                Text("Manage Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                Text("Delete posts and delete comments", fontSize = 12.sp, color = SubtitleTextColor)
             }
 
             item {
-                Text("Events (${events.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Text("Events (${events.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
             }
 
             if (events.isEmpty()) {
@@ -832,7 +832,7 @@ fun ManagePostsTab() {
             }
 
             item {
-                Text("News Updates (${newsList.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Text("News Updates (${newsList.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
             }
 
             if (newsList.isEmpty()) {
@@ -877,7 +877,7 @@ fun ManagePostsTab() {
                     text = "Edit ${editingPostType}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
+                    color = ContentTextColor
                 )
             },
             text = {
@@ -968,7 +968,7 @@ fun ManagePostsTab() {
                         )
                     }
 
-                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     Spacer(modifier = Modifier.height(4.dp))
                     val editCategories = if (editingPostType == "Event") {
                         listOf("General", "Academic", "Cultural", "Sports", "Tech")
@@ -996,7 +996,7 @@ fun ManagePostsTab() {
                     )
 
                     // Cover Image Selection & Upload Area
-                    Text("Cover Image", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Text("Cover Image", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1146,7 +1146,7 @@ fun IndicatorLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, text: 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(3.dp))
-        Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+        Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
     }
 }
 
@@ -1189,7 +1189,7 @@ fun AdminPostCard(
                     Text(category, fontSize = 11.sp, color = Color.Gray)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -1266,8 +1266,8 @@ fun ManageUsersTab() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Registered Users", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text("Manage account status access", fontSize = 12.sp, color = Color(0xFF64748B))
+                Text("Registered Users", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                Text("Manage account status access", fontSize = 12.sp, color = SubtitleTextColor)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -1311,7 +1311,7 @@ fun ManageUsersTab() {
                                         if (usr.getString("name").isNotEmpty()) usr.getString("name")[0].uppercaseChar().toString() else "U",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF475569)
+                                        color = SubtitleTextColor
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -1319,7 +1319,7 @@ fun ManageUsersTab() {
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                                    Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         if (isBanned) "Suspended" else "Active",
@@ -1453,13 +1453,13 @@ fun AdminChatTab() {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Admin Discuss", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-        Text("Secure channels with other system admins", fontSize = 12.sp, color = Color(0xFF64748B))
+        Text("Admin Discuss", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+        Text("Secure channels with other system admins", fontSize = 12.sp, color = SubtitleTextColor)
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // Conversations target selector (Dynamic Horizontal Avatars Bar)
-        Text("Admin Conversations", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+        Text("Admin Conversations", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
         Spacer(modifier = Modifier.height(6.dp))
         androidx.compose.foundation.lazy.LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1517,7 +1517,7 @@ fun AdminChatTab() {
                                 if (name.isNotEmpty()) name[0].uppercaseChar().toString() else "A",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF475569)
+                                color = SubtitleTextColor
                             )
                         }
                     }
@@ -1552,7 +1552,7 @@ fun AdminChatTab() {
                         if (activeRecipient == null) "📢 Global Admin Channel" else "💬 Direct: ${activeRecipient!!.getString("name")}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF334155)
+                        color = ContentTextColor
                     )
                 }
 
@@ -1568,7 +1568,7 @@ fun AdminChatTab() {
                             horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
                         ) {
                             if (!isMe) {
-                                Text(msg.getString("senderName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B), modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+                                Text(msg.getString("senderName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
                             }
                             Box(
                                 modifier = Modifier
@@ -1686,45 +1686,54 @@ fun AdminProfileTab(onLogout: () -> Unit) {
         item {
             Box(
                 modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, Color(0xFF6366F1), CircleShape)
-                    .clickable { avatarLauncher.launch("image/*") },
-                contentAlignment = Alignment.Center
+                    .size(96.dp),
+                contentAlignment = Alignment.BottomEnd
             ) {
-                if (avatarUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = avatarUrl,
-                        contentDescription = "Avatar",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(PurpleGradient),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
-                            fontSize = 36.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                    }
-                }
-                
-                // Overlay Camera edit label
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f)),
+                        .clip(CircleShape)
+                        .border(2.dp, Color(0xFF6366F1), CircleShape)
+                        .clickable { avatarLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Avatar",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(PurpleGradient),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+                
+                // Floating round edit badge at bottom-right corner
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF6366F1))
+                        .border(BorderStroke(2.dp, CardBgColor), CircleShape)
+                        .clickable { avatarLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
                         contentDescription = "Change photo",
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
@@ -2134,7 +2143,7 @@ fun AdminDashboardTab() {
                 }
             },
             title = {
-                Text(post.getString("title"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                Text(post.getString("title"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
             },
             text = {
                 Column(
@@ -2169,7 +2178,7 @@ fun AdminDashboardTab() {
                     Text(
                         post.optString("description", post.optString("content", "")),
                         fontSize = 12.sp,
-                        color = Color(0xFF334155),
+                        color = ContentTextColor,
                         lineHeight = 18.sp
                     )
 
@@ -2211,7 +2220,7 @@ fun AdminDashboardTab() {
 
                     HorizontalDivider(color = Color(0xFFEEF2F6))
 
-                    Text("Comments (${previewComments.size})", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Comments (${previewComments.size})", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
 
                     // Add comment form
                     Row(
@@ -2277,11 +2286,11 @@ fun AdminDashboardTab() {
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text(c.getString("authorName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF334155))
+                                            Text(c.getString("authorName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                                             Text(if (c.has("createdAt")) c.getString("createdAt").take(10) else "", fontSize = 8.sp, color = Color.Gray)
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
-                                        Text(c.getString("content"), fontSize = 11.sp, color = Color(0xFF475569))
+                                        Text(c.getString("content"), fontSize = 11.sp, color = SubtitleTextColor)
                                     }
                                 }
                             }
@@ -2358,8 +2367,8 @@ fun AdminAnalyticsTab() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Analytics Dashboard", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text("Platform overview and statistics", fontSize = 12.sp, color = Color(0xFF64748B))
+                Text("Analytics Dashboard", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                Text("Platform overview and statistics", fontSize = 12.sp, color = SubtitleTextColor)
             }
 
             item {
@@ -2383,7 +2392,7 @@ fun AdminAnalyticsTab() {
             }
 
             item {
-                Text("Recent Activity Log", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Text("Recent Activity Log", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
             }
 
             if (recentLogs.isEmpty()) {
@@ -2408,7 +2417,7 @@ fun StatsCard(title: String, value: String, bgColor: Color, tintColor: Color, mo
         border = BorderStroke(1.dp, tintColor.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(title, fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+            Text(title, fontSize = 11.sp, color = SubtitleTextColor, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(6.dp))
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = tintColor)
         }
@@ -2441,8 +2450,8 @@ fun ActivityLogItem(log: JSONObject) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(log.getString("title"), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
-                Text("${log.optString("adminName")} • ${log.optString("category")}", fontSize = 10.sp, color = Color(0xFF64748B))
+                Text(log.getString("title"), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                Text("${log.optString("adminName")} • ${log.optString("category")}", fontSize = 10.sp, color = SubtitleTextColor)
             }
             Box(
                 modifier = Modifier
@@ -2515,7 +2524,7 @@ fun FeedCard(title: String, category: String, image: String, creator: String, da
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider(color = Color(0xFFF1F5F9))
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2524,8 +2533,8 @@ fun FeedCard(title: String, category: String, image: String, creator: String, da
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("👤 $creator", fontSize = 10.sp, color = Color(0xFF64748B))
-                    Text("🕒 ${date.take(10)}", fontSize = 10.sp, color = Color(0xFF64748B))
+                    Text("👤 $creator", fontSize = 10.sp, color = SubtitleTextColor)
+                    Text("🕒 ${date.take(10)}", fontSize = 10.sp, color = SubtitleTextColor)
                 }
             }
         }
