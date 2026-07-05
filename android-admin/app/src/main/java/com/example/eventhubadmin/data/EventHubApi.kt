@@ -288,6 +288,16 @@ object EventHubApi {
     suspend fun getUnreadChatsCount(token: String): JSONArray {
         return JSONArray(apiRequest("/api/admin/chat/unread", "GET", null, token))
     }
+
+    fun isDarkTheme(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("dark_theme", false)
+    }
+
+    fun setDarkTheme(context: Context, isDark: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("dark_theme", isDark).apply()
+    }
 }
 
 data class AdminProfile(

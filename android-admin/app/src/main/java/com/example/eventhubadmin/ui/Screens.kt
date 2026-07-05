@@ -43,9 +43,29 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
+import com.example.eventhubadmin.ThemeState
+
 val PurpleGradient = Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFFA855F7)))
-val BackgroundColor = Color(0xFFF8FAFC)
-val CardBorderColor = Color(0xFFE2E8F0)
+
+val BackgroundColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+
+val CardBorderColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
+val ContentTextColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color.White else Color(0xFF0F172A)
+
+val SubtitleTextColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+val CardBgColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF1E293B) else Color.White
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +107,7 @@ fun LoginScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -189,7 +209,7 @@ fun DashboardScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
+            NavigationBar(containerColor = CardBgColor) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -321,7 +341,7 @@ fun CreateTab() {
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -1145,7 +1165,7 @@ fun AdminPostCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
         border = BorderStroke(1.dp, CardBorderColor)
     ) {
         Row(
@@ -1260,7 +1280,7 @@ fun ManageUsersTab() {
                     val isBanned = usr.optBoolean("banned", false)
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
                         border = BorderStroke(1.dp, CardBorderColor)
                     ) {
                         Row(
@@ -1517,7 +1537,7 @@ fun AdminChatTab() {
         // Chat messages box
         Card(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = CardBgColor),
             border = BorderStroke(1.dp, CardBorderColor),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -1640,52 +1660,89 @@ fun AdminProfileTab(onLogout: () -> Unit) {
     var msgType by remember { mutableStateOf("success") }
     var loading by remember { mutableStateOf(false) }
 
+    val avatarLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                try {
+                    val base64 = uriToCompressedBase64(context, it)
+                    if (base64.isNotEmpty()) {
+                        avatarUrl = "data:image/jpeg;base64,$base64"
+                        android.widget.Toast.makeText(context, "Profile picture updated locally! Save to apply. ✓", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Failed to load image.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            if (user.avatar.isNotEmpty()) {
-                AsyncImage(
-                    model = user.avatar,
-                    contentDescription = "Avatar",
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
-            } else {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, Color(0xFF6366F1), CircleShape)
+                    .clickable { avatarLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (avatarUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(PurpleGradient),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                    }
+                }
+                
+                // Overlay Camera edit label
                 Box(
                     modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(PurpleGradient),
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        if (user.name.isNotEmpty()) user.name[0].uppercaseChar().toString() else "A",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Change photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("System Administrator", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+            Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("System Administrator", fontSize = 11.sp, color = SubtitleTextColor, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(24.dp))
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                    Text("Admin Settings", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Admin Settings", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (msg.isNotEmpty()) {
@@ -1738,6 +1795,33 @@ fun AdminProfileTab(onLogout: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider(color = CardBorderColor.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Premium Theme Switcher option
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Dark Theme Mode", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                            Text("Switch app color scheme to dark mode", fontSize = 11.sp, color = SubtitleTextColor)
+                        }
+                        Switch(
+                            checked = ThemeState.isDarkTheme,
+                            onCheckedChange = { isDark ->
+                                ThemeState.isDarkTheme = isDark
+                                EventHubApi.setDarkTheme(context, isDark)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF6366F1)
+                            )
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
@@ -1824,7 +1908,7 @@ fun AdminProfileTab(onLogout: () -> Unit) {
 fun AdminManageTab() {
     var manageType by remember { mutableStateOf(0) } // 0 = Posts, 1 = Users
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = manageType, containerColor = Color.White) {
+        TabRow(selectedTabIndex = manageType, containerColor = CardBgColor) {
             Tab(selected = manageType == 0, onClick = { manageType = 0 }) {
                 Text("Manage Posts", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
@@ -1938,7 +2022,7 @@ fun AdminDashboardTab() {
     } else {
         Column(modifier = Modifier.fillMaxSize()) {
             // Tab switcher
-            TabRow(selectedTabIndex = feedTab, containerColor = Color.White) {
+            TabRow(selectedTabIndex = feedTab, containerColor = CardBgColor) {
                 Tab(selected = feedTab == 0, onClick = { feedTab = 0; selectedCategory = "All" }) {
                     Text("Community Events", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
@@ -2337,8 +2421,8 @@ fun ActivityLogItem(log: JSONObject) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFEEF2F6))
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
+        border = BorderStroke(1.dp, CardBorderColor)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -2397,8 +2481,8 @@ fun FeedCard(title: String, category: String, image: String, creator: String, da
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFEEF2F6))
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
+        border = BorderStroke(1.dp, CardBorderColor)
     ) {
         Column {
             if (image.isNotEmpty()) {
