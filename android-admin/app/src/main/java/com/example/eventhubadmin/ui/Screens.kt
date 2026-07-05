@@ -1291,7 +1291,7 @@ fun ManageUsersTab() {
                             val avatar = usr.optString("avatar", "")
                             if (avatar.isNotEmpty()) {
                                 AsyncImage(
-                                    model = avatar,
+                                    model = formatImageUrl(avatar),
                                     contentDescription = "User Avatar",
                                     modifier = Modifier
                                         .size(36.dp)
@@ -1496,7 +1496,7 @@ fun AdminChatTab() {
                 ) {
                     if (avatar.isNotEmpty()) {
                         AsyncImage(
-                            model = avatar,
+                            model = formatImageUrl(avatar),
                             contentDescription = name,
                             modifier = Modifier
                                 .size(46.dp)
@@ -1699,7 +1699,7 @@ fun AdminProfileTab(onLogout: () -> Unit) {
                 ) {
                     if (avatarUrl.isNotEmpty()) {
                         AsyncImage(
-                            model = avatarUrl,
+                            model = formatImageUrl(avatarUrl),
                             contentDescription = "Avatar",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop
