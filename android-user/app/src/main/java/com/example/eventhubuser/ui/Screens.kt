@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.eventhubuser.ThemeState
 import com.example.eventhubuser.data.EventHubApi
 import com.example.eventhubuser.data.UserProfile
 import kotlinx.coroutines.launch
@@ -42,8 +43,26 @@ import org.json.JSONObject
 
 // Common Theme Gradients & Colors
 val PurpleGradient = Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)))
-val BackgroundColor = Color(0xFFF8FAFC)
-val CardBorderColor = Color(0xFFE2E8F0)
+
+val BackgroundColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+
+val CardBorderColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0)
+
+val ContentTextColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color.White else Color(0xFF0F172A)
+
+val SubtitleTextColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+val CardBgColor: Color
+    @Composable
+    get() = if (ThemeState.isDarkTheme) Color(0xFF1E293B) else Color.White
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,20 +99,20 @@ fun LoginScreen(
                 Icon(Icons.Default.Star, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(36.dp))
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text("EventHub", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Community Portal", fontSize = 14.sp, color = Color(0xFF64748B))
+            Text("EventHub", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Community Portal", fontSize = 14.sp, color = SubtitleTextColor)
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Card Form
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                    Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Sign In", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (errorMsg.isNotEmpty()) {
@@ -227,19 +246,19 @@ fun RegisterScreen(
                 Icon(Icons.Default.Add, contentDescription = "Logo", tint = Color.White, modifier = Modifier.size(36.dp))
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Create Account", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Join the EventHub community", fontSize = 14.sp, color = Color(0xFF64748B))
+            Text("Create Account", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Join the EventHub community", fontSize = 14.sp, color = SubtitleTextColor)
 
             Spacer(modifier = Modifier.height(28.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                    Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Register", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (errorMsg.isNotEmpty()) {
@@ -377,14 +396,14 @@ fun ProfileSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Complete Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Add details so other members can reach you", fontSize = 12.sp, color = Color(0xFF64748B))
+            Text("Complete Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Add details so other members can reach you", fontSize = 12.sp, color = SubtitleTextColor)
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -424,7 +443,7 @@ fun ProfileSetupScreen(
                     }
 
                     // Preset Avatars Selector
-                    Text("Select a Profile Photo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                    Text("Select a Profile Photo", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SubtitleTextColor)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -463,7 +482,7 @@ fun ProfileSetupScreen(
                         ) {
                             if (isCustomSelected) {
                                 AsyncImage(
-                                    model = avatarUrl,
+                                    model = EventHubApi.formatImageUrl(avatarUrl),
                                     contentDescription = "Custom Avatar",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -556,7 +575,7 @@ fun ProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
             TextButton(onClick = { onSetupComplete() }) {
-                Text("Skip for now", color = Color(0xFF64748B))
+                Text("Skip for now", color = SubtitleTextColor)
             }
         }
     }
@@ -574,7 +593,7 @@ fun DashboardScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
+            NavigationBar(containerColor = CardBgColor) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -709,7 +728,7 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
 
             if (filteredEvents.isEmpty()) {
                 item {
-                    Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
+                    Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
                 }
             } else {
                 items(filteredEvents) { ev ->
@@ -736,7 +755,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -784,7 +803,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                             .clip(RoundedCornerShape(4.dp))
                     ) {
-                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     }
                 }
 
@@ -793,7 +812,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                     title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
+                    color = ContentTextColor,
                     lineHeight = 22.sp
                 )
 
@@ -801,7 +820,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                 Text(
                     description,
                     fontSize = 13.sp,
-                    color = Color(0xFF475569),
+                    color = SubtitleTextColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -809,14 +828,14 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Place, contentDescription = "Location", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Place, contentDescription = "Location", tint = SubtitleTextColor, modifier = Modifier.size(13.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(event.optString("location", "Virtual"), fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text(event.optString("location", "Virtual"), fontSize = 11.sp, color = SubtitleTextColor)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Person, contentDescription = "Author", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.Person, contentDescription = "Author", tint = SubtitleTextColor, modifier = Modifier.size(13.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Posted by $adminName", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text("Posted by $adminName", fontSize = 11.sp, color = SubtitleTextColor)
                     }
                 }
 
@@ -856,7 +875,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text("${likesCount.value}", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text("${likesCount.value}", fontSize = 11.sp, color = SubtitleTextColor)
 
                         Spacer(modifier = Modifier.width(16.dp))
 
@@ -867,11 +886,11 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Comment,
                                 contentDescription = "Comments",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text("$commentsCount", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text("$commentsCount", fontSize = 11.sp, color = SubtitleTextColor)
                     }
 
                     Row {
@@ -892,7 +911,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.Default.ArrowDownward,
                                 contentDescription = "Download",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -919,7 +938,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1067,7 +1086,7 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
 
             if (filteredNews.isEmpty()) {
                 item {
-                    Text("No news match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B))
+                    Text("No news match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
                 }
             } else {
                 items(filteredNews) { ns ->
@@ -1095,7 +1114,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -1143,7 +1162,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                             .clip(RoundedCornerShape(4.dp))
                     ) {
-                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                        Text(category.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SubtitleTextColor)
                     }
                 }
 
@@ -1152,7 +1171,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                     title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
+                    color = ContentTextColor,
                     lineHeight = 22.sp
                 )
 
@@ -1160,16 +1179,16 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                 Text(
                     summary,
                     fontSize = 13.sp,
-                    color = Color(0xFF475569),
+                    color = SubtitleTextColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Person, contentDescription = "Author", tint = Color(0xFF64748B), modifier = Modifier.size(13.dp))
+                    Icon(Icons.Default.Person, contentDescription = "Author", tint = SubtitleTextColor, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Published by $adminName", fontSize = 11.sp, color = Color(0xFF64748B))
+                    Text("Published by $adminName", fontSize = 11.sp, color = SubtitleTextColor)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1208,7 +1227,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text("${likesCount.value}", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text("${likesCount.value}", fontSize = 11.sp, color = SubtitleTextColor)
 
                         Spacer(modifier = Modifier.width(16.dp))
 
@@ -1219,11 +1238,11 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Comment,
                                 contentDescription = "Comments",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text("$commentsCount", fontSize = 11.sp, color = Color(0xFF64748B))
+                        Text("$commentsCount", fontSize = 11.sp, color = SubtitleTextColor)
                     }
 
                     Row {
@@ -1244,7 +1263,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.Default.ArrowDownward,
                                 contentDescription = "Download",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1271,7 +1290,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "Share",
-                                tint = Color(0xFF64748B),
+                                tint = SubtitleTextColor,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1365,8 +1384,8 @@ fun AlertsTab() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Activity Alerts", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-                Text("Updates on comments and likes", fontSize = 12.sp, color = Color(0xFF64748B))
+                Text("Activity Alerts", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                Text("Updates on comments and likes", fontSize = 12.sp, color = SubtitleTextColor)
             }
             if (notifications.any { !it.optBoolean("read", false) }) {
                 TextButton(
@@ -1398,7 +1417,7 @@ fun AlertsTab() {
             }
         } else if (notifications.isEmpty()) {
             Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("No recent alerts.", color = Color(0xFF64748B))
+                Text("No recent alerts.", color = SubtitleTextColor)
             }
         } else {
             LazyColumn(
@@ -1535,7 +1554,7 @@ fun ProfileTab(
             ) {
                 if (user.avatar.isNotEmpty()) {
                     AsyncImage(
-                        model = user.avatar,
+                        model = EventHubApi.formatImageUrl(user.avatar),
                         contentDescription = "Avatar",
                         modifier = Modifier
                             .fillMaxSize()
@@ -1575,8 +1594,8 @@ fun ProfileTab(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
-            Text("Community Member", fontSize = 11.sp, color = Color(0xFF64748B), fontWeight = FontWeight.SemiBold)
+            Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+            Text("Community Member", fontSize = 11.sp, color = SubtitleTextColor, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tab Selector Row
@@ -1614,12 +1633,12 @@ fun ProfileTab(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = CardBgColor),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                        Text("Edit Profile Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                        Text("Edit Profile Details", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         if (msg.isNotEmpty()) {
@@ -1731,6 +1750,36 @@ fun ProfileTab(
                     }
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Dark Theme Mode", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                            Text("Adjust system visual theme style", fontSize = 11.sp, color = SubtitleTextColor)
+                        }
+                        Switch(
+                            checked = ThemeState.isDarkTheme,
+                            onCheckedChange = { isChecked ->
+                                ThemeState.isDarkTheme = isChecked
+                                EventHubApi.setDarkTheme(context, isChecked)
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         if (activeSubTab == "saved") {
@@ -1791,7 +1840,7 @@ fun ProfileTab(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No saved ${savedTypeTab} yet.", color = Color(0xFF64748B), fontSize = 14.sp)
+                        Text("No saved ${savedTypeTab} yet.", color = SubtitleTextColor, fontSize = 14.sp)
                     }
                 }
             } else {
@@ -1812,7 +1861,7 @@ fun ProfileTab(
                                     onNavigateToNewsDetail(itemId)
                                 }
                             },
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, CardBorderColor)
@@ -1852,7 +1901,7 @@ fun ProfileTab(
                                     itemTitle,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF0F172A),
+                                    color = ContentTextColor,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1971,7 +2020,7 @@ fun EventDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardBgColor)
             )
         }
     ) { innerPadding ->
@@ -1997,7 +2046,7 @@ fun EventDetailScreen(
                     // Title Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -2014,27 +2063,27 @@ fun EventDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
-                            Text(ev.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                            Text(ev.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                             Text(ev.getString("category"), fontSize = 12.sp, color = Color(0xFF8B5CF6), fontWeight = FontWeight.Bold)
 
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.DateRange, contentDescription = "Date", tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.DateRange, contentDescription = "Date", tint = SubtitleTextColor, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("${ev.getString("date")}${if (ev.has("time")) " at ${ev.getString("time")}" else ""}", fontSize = 13.sp, color = Color(0xFF334155))
+                                Text("${ev.getString("date")}${if (ev.has("time")) " at ${ev.getString("time")}" else ""}", fontSize = 13.sp, color = ContentTextColor)
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Place, contentDescription = "Location", tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Place, contentDescription = "Location", tint = SubtitleTextColor, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(ev.optString("location", "Virtual"), fontSize = 13.sp, color = Color(0xFF334155))
+                                Text(ev.optString("location", "Virtual"), fontSize = 13.sp, color = ContentTextColor)
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountBox, contentDescription = "Author", tint = Color(0xFF64748B), modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.AccountBox, contentDescription = "Author", tint = SubtitleTextColor, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Posted by ${ev.getString("adminName")}", fontSize = 13.sp, color = Color(0xFF334155))
+                                Text("Posted by ${ev.getString("adminName")}", fontSize = 13.sp, color = ContentTextColor)
                             }
                         }
                     }
@@ -2044,13 +2093,13 @@ fun EventDetailScreen(
                     // Description Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Description", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                            Text("Description", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(ev.getString("description"), fontSize = 13.sp, color = Color(0xFF475569), lineHeight = 20.sp)
+                            Text(ev.getString("description"), fontSize = 13.sp, color = SubtitleTextColor, lineHeight = 20.sp)
 
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -2104,7 +2153,7 @@ fun EventDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2127,7 +2176,7 @@ fun EventDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2155,7 +2204,7 @@ fun EventDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2186,7 +2235,7 @@ fun EventDetailScreen(
                 }
 
                 item {
-                    Text("Comments (${comments.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Comments (${comments.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                 }
 
                 // Add Comment Box
@@ -2229,13 +2278,13 @@ fun EventDetailScreen(
 
                 if (comments.isEmpty()) {
                     item {
-                        Text("No comments yet. Start the conversation!", modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B), fontSize = 12.sp)
+                        Text("No comments yet. Start the conversation!", modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center, color = SubtitleTextColor, fontSize = 12.sp)
                     }
                 } else {
                     items(comments) { c ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = CardBgColor),
                             border = BorderStroke(1.dp, CardBorderColor)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -2243,15 +2292,15 @@ fun EventDetailScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(c.getString("authorName"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                                    Text(c.getString("authorName"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                                     Text(
                                         "Just now", // Fallback for simple date rendering
                                         fontSize = 10.sp,
-                                        color = Color(0xFF64748B)
+                                        color = SubtitleTextColor
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(c.getString("content"), fontSize = 12.sp, color = Color(0xFF475569))
+                                Text(c.getString("content"), fontSize = 12.sp, color = SubtitleTextColor)
                             }
                         }
                     }
@@ -2319,7 +2368,7 @@ fun NewsDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardBgColor)
             )
         }
     ) { innerPadding ->
@@ -2345,7 +2394,7 @@ fun NewsDetailScreen(
                     // Content Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -2362,14 +2411,14 @@ fun NewsDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
-                            Text(ns.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                            Text(ns.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                             Text(ns.getString("category"), fontSize = 12.sp, color = Color(0xFFEC4899), fontWeight = FontWeight.Bold)
 
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 ns.getString("content"),
                                 fontSize = 14.sp,
-                                color = Color(0xFF334155),
+                                color = ContentTextColor,
                                 lineHeight = 22.sp
                             )
 
@@ -2425,7 +2474,7 @@ fun NewsDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2448,7 +2497,7 @@ fun NewsDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2476,7 +2525,7 @@ fun NewsDetailScreen(
                                     },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFEEF2F6),
-                                        contentColor = Color(0xFF475569)
+                                        contentColor = SubtitleTextColor
                                     ),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
@@ -2507,7 +2556,7 @@ fun NewsDetailScreen(
                 }
 
                 item {
-                    Text("Comments (${comments.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Comments (${comments.size})", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                 }
 
                 // Add Comment Box
@@ -2550,13 +2599,13 @@ fun NewsDetailScreen(
 
                 if (comments.isEmpty()) {
                     item {
-                        Text("No comments yet. Start the conversation!", modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center, color = Color(0xFF64748B), fontSize = 12.sp)
+                        Text("No comments yet. Start the conversation!", modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center, color = SubtitleTextColor, fontSize = 12.sp)
                     }
                 } else {
                     items(comments) { c ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = CardBgColor),
                             border = BorderStroke(1.dp, CardBorderColor)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -2564,11 +2613,11 @@ fun NewsDetailScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(c.getString("authorName"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
-                                    Text("Just now", fontSize = 10.sp, color = Color(0xFF64748B))
+                                    Text(c.getString("authorName"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                                    Text("Just now", fontSize = 10.sp, color = SubtitleTextColor)
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(c.getString("content"), fontSize = 12.sp, color = Color(0xFF475569))
+                                Text(c.getString("content"), fontSize = 12.sp, color = SubtitleTextColor)
                             }
                         }
                     }
@@ -2590,7 +2639,7 @@ fun EventHubHeroHeader(
             .fillMaxWidth()
             .padding(bottom = 8.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CardBgColor),
         border = BorderStroke(1.dp, CardBorderColor)
     ) {
         Column(
@@ -2620,7 +2669,7 @@ fun EventHubHeroHeader(
                 title,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF0F172A),
+                color = ContentTextColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 30.sp
             )
@@ -2628,7 +2677,7 @@ fun EventHubHeroHeader(
             Text(
                 subtitle,
                 fontSize = 12.sp,
-                color = Color(0xFF64748B),
+                color = SubtitleTextColor,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp,
                 modifier = Modifier.padding(horizontal = 12.dp)
@@ -2644,19 +2693,19 @@ fun EventHubHeroHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF22C55E)))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Live Updates", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                    Text("Live Updates", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SubtitleTextColor)
                 }
                 Text("•", color = Color(0xFFCBD5E1))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Person, contentDescription = "Admins", tint = Color(0xFF8B5CF6), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("6 Admins", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                    Text("6 Admins", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SubtitleTextColor)
                 }
                 Text("•", color = Color(0xFFCBD5E1))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, contentDescription = "Stats", tint = Color(0xFFEC4899), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (eventsCount > 0) "$eventsCount Events" else "$newsCount Articles", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF475569))
+                    Text(if (eventsCount > 0) "$eventsCount Events" else "$newsCount Articles", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SubtitleTextColor)
                 }
             }
         }

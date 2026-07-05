@@ -374,6 +374,16 @@ object EventHubApi {
         val cleanUrl = if (url.startsWith("/")) url else "/$url"
         return "$BASE_URL$cleanUrl"
     }
+
+    fun isDarkTheme(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("dark_theme", false)
+    }
+
+    fun setDarkTheme(context: Context, isDark: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("dark_theme", isDark).apply()
+    }
 }
 
 data class UserProfile(
