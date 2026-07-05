@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -1380,6 +1381,8 @@ fun AdminChatTab() {
     var chatInput by remember { mutableStateOf("") }
     var loadingChats by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
+
     val fetchAdmins = {
         scope.launch {
             try {
@@ -1416,10 +1419,16 @@ fun AdminChatTab() {
     }
 
     LaunchedEffect(activeRecipient) {
-        // Poll messages periodically
+        fetchMessages()
         while (true) {
+            delay(4000)
             fetchMessages()
-            delay(5000)
+        }
+    }
+
+    LaunchedEffect(chatMessages.size) {
+        if (chatMessages.isNotEmpty()) {
+            listState.animateScrollToItem(chatMessages.size - 1)
         }
     }
 
@@ -1429,33 +1438,76 @@ fun AdminChatTab() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Conversations target selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Conversations target selector (Dynamic Horizontal Avatars Bar)
+        Text("Admin Conversations", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B))
+        Spacer(modifier = Modifier.height(6.dp))
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Button(
-                onClick = { activeRecipient = null },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (activeRecipient == null) Color(0xFF6366F1) else Color(0xFFE2E8F0),
-                    contentColor = if (activeRecipient == null) Color.White else Color(0xFF475569)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Global Chat", fontSize = 11.sp)
+            item {
+                val isSelected = activeRecipient == null
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { activeRecipient = null }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) Color(0xFF6366F1) else Color(0xFF475569))
+                            .border(2.dp, if (isSelected) Color(0xFF818CF8) else Color.Transparent, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Groups, contentDescription = "Global", tint = Color.White, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Global", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (isSelected) Color(0xFF6366F1) else Color(0xFF475569))
+                }
             }
 
-            admins.filter { it.getString("email") != user.email }.take(2).forEach { adm ->
-                val isSelected = activeRecipient?.getString("_id") == adm.getString("_id")
-                Button(
-                    onClick = { activeRecipient = adm },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected) Color(0xFF6366F1) else Color(0xFFE2E8F0),
-                        contentColor = if (isSelected) Color.White else Color(0xFF475569)
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+            items(admins.filter { it.optString("email") != user.email }) { adm ->
+                val isSelected = activeRecipient?.optString("_id") == adm.optString("_id")
+                val name = adm.optString("name", "Admin")
+                val avatar = adm.optString("avatar", "")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { activeRecipient = adm }
                 ) {
-                    Text(adm.getString("name"), fontSize = 11.sp)
+                    if (avatar.isNotEmpty()) {
+                        AsyncImage(
+                            model = avatar,
+                            contentDescription = name,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, if (isSelected) Color(0xFF6366F1) else Color.Transparent, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFE2E8F0))
+                                .border(2.dp, if (isSelected) Color(0xFF6366F1) else Color.Transparent, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                if (name.isNotEmpty()) name[0].uppercaseChar().toString() else "A",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF475569)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        name.split(" ")[0],
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isSelected) Color(0xFF6366F1) else Color(0xFF475569)
+                    )
                 }
             }
         }
@@ -1485,28 +1537,45 @@ fun AdminChatTab() {
                 }
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(chatMessages) { msg ->
-                        // simple bubble
                         val isMe = msg.getString("senderName") == user.name
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
                         ) {
-                            Text(msg.getString("senderName"), fontSize = 9.sp, color = Color.Gray)
+                            if (!isMe) {
+                                Text(msg.getString("senderName"), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF64748B), modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+                            }
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isMe) Color(0xFF6366F1) else Color(0xFFE2E8F0))
-                                    .padding(8.dp)
+                                    .clip(
+                                        if (isMe) RoundedCornerShape(12.dp, 12.dp, 0.dp, 12.dp)
+                                        else RoundedCornerShape(12.dp, 12.dp, 12.dp, 0.dp)
+                                    )
+                                    .background(if (isMe) Color(0xFF6366F1) else Color(0xFFF1F5F9))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
-                                Text(
-                                    msg.getString("text"),
-                                    fontSize = 12.sp,
-                                    color = if (isMe) Color.White else Color.Black
-                                )
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        msg.getString("text"),
+                                        fontSize = 12.sp,
+                                        color = if (isMe) Color.White else Color(0xFF1E293B)
+                                    )
+                                    val timeStr = formatChatTime(msg.optString("createdAt", ""))
+                                    if (timeStr.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            timeStr,
+                                            fontSize = 8.sp,
+                                            color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                                            textAlign = TextAlign.End
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -2482,4 +2551,19 @@ fun CategorySelectChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
         )
     }
 }
+
+fun formatChatTime(isoString: String): String {
+    if (isoString.isBlank()) return ""
+    return try {
+        val sdfInput = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        val date = sdfInput.parse(isoString)
+        val sdfOutput = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        sdfOutput.format(date ?: java.util.Date())
+    } catch (e: Exception) {
+        ""
+    }
+}
+
 
