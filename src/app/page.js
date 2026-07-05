@@ -214,7 +214,28 @@ export default function Home() {
           const data = await res.json();
           if (res.ok) {
             setProfileForm(prev => ({ ...prev, avatar: data.url }));
-            setProfileMsg({ show: true, msg: 'Photo updated! ✓', type: 'success' });
+            
+            // Auto-save the new avatar to the database immediately
+            const saveRes = await fetch('/api/auth/me', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                name: user.name,
+                avatar: data.url,
+                phone: user.phone
+              })
+            });
+            if (saveRes.ok) {
+              const saveData = await saveRes.json();
+              updateUser(saveData.user);
+              setProfileMsg({ show: true, msg: 'Profile photo updated and saved! ✓', type: 'success' });
+            } else {
+              const saveData = await saveRes.json();
+              setProfileMsg({ show: true, msg: saveData.error || 'Failed to save uploaded photo.', type: 'error' });
+            }
           } else {
             setProfileMsg({ show: true, msg: data.error || 'Failed to upload photo.', type: 'error' });
           }
