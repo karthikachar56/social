@@ -357,21 +357,41 @@ fun CreateTab() {
                             minLines = 3
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = date,
-                            onValueChange = { date = it },
-                            label = { Text("Date (e.g. Jul 12, 2026)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = date,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Date (YYYY-MM-DD)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                                }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showDatePicker(context) { date = it } }
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = time,
-                            onValueChange = { time = it },
-                            label = { Text("Time (optional)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = time,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Time (optional)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    Icon(Icons.Default.Schedule, contentDescription = "Select Time")
+                                }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showTimePicker(context) { time = it } }
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
                             value = location,
@@ -520,13 +540,25 @@ fun CreateTab() {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text("Category (e.g. Technology, General)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val categories = if (activeFormType == 0) {
+                        listOf("General", "Academic", "Cultural", "Sports", "Tech")
+                    } else {
+                        listOf("General", "Tech", "Design", "Business", "Health", "Education")
+                    }
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(categories) { cat ->
+                            CategorySelectChip(
+                                text = cat,
+                                isSelected = category == cat,
+                                onClick = { category = cat }
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
@@ -865,18 +897,41 @@ fun ManagePostsTab() {
                     )
 
                     if (editingPostType == "Event") {
-                        OutlinedTextField(
-                            value = editDate,
-                            onValueChange = { editDate = it },
-                            label = { Text("Date (e.g. 2026-07-20)") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = editTime,
-                            onValueChange = { editTime = it },
-                            label = { Text("Time (optional)") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = editDate,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Date (YYYY-MM-DD)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                                }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showDatePicker(context) { editDate = it } }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = editTime,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Time (optional)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    Icon(Icons.Default.Schedule, contentDescription = "Select Time")
+                                }
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clickable { showTimePicker(context) { editTime = it } }
+                            )
+                        }
                         OutlinedTextField(
                             value = editLocation,
                             onValueChange = { editLocation = it },
@@ -892,12 +947,25 @@ fun ManagePostsTab() {
                         )
                     }
 
-                    OutlinedTextField(
-                        value = editCategory,
-                        onValueChange = { editCategory = it },
-                        label = { Text("Category") },
+                    Text("Category", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF475569))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val editCategories = if (editingPostType == "Event") {
+                        listOf("General", "Academic", "Cultural", "Sports", "Tech")
+                    } else {
+                        listOf("General", "Tech", "Design", "Business", "Health", "Education")
+                    }
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) {
+                        items(editCategories) { cat ->
+                            CategorySelectChip(
+                                text = cat,
+                                isSelected = editCategory == cat,
+                                onClick = { editCategory = cat }
+                            )
+                        }
+                    }
 
                     OutlinedTextField(
                         value = editTagsInput,
@@ -2360,3 +2428,58 @@ fun uriToCompressedBase64(context: Context, uri: android.net.Uri): String {
     
     return Base64.encodeToString(bytes, Base64.NO_WRAP)
 }
+
+fun showDatePicker(context: Context, onDateSelected: (String) -> Unit) {
+    val calendar = java.util.Calendar.getInstance()
+    val year = calendar.get(java.util.Calendar.YEAR)
+    val month = calendar.get(java.util.Calendar.MONTH)
+    val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+
+    android.app.DatePickerDialog(
+        context,
+        { _, selectedYear, selectedMonth, selectedDay ->
+            val formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+            onDateSelected(formattedDate)
+        },
+        year,
+        month,
+        day
+    ).show()
+}
+
+fun showTimePicker(context: Context, onTimeSelected: (String) -> Unit) {
+    val calendar = java.util.Calendar.getInstance()
+    val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+    val minute = calendar.get(java.util.Calendar.MINUTE)
+
+    android.app.TimePickerDialog(
+        context,
+        { _, selectedHour, selectedMinute ->
+            val formattedTime = String.format("%02d:%02d", selectedHour, selectedMinute)
+            onTimeSelected(formattedTime)
+        },
+        hour,
+        minute,
+        true
+    ).show()
+}
+
+@Composable
+fun CategorySelectChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) Color(0xFF6366F1) else Color(0xFFF1F5F9))
+            .border(BorderStroke(1.dp, if (isSelected) Color(0xFF6366F1) else Color(0xFFE2E8F0)), RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isSelected) Color.White else Color(0xFF475569)
+        )
+    }
+}
+
