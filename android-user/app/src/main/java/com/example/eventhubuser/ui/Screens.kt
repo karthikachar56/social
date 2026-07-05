@@ -590,6 +590,39 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
+    val token = remember { EventHubApi.getSessionToken(context) ?: "" }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        if (token.isNotEmpty()) {
+            scope.launch {
+                try {
+                    val profileJson = EventHubApi.getProfile(token)
+                    val userObj = profileJson.getJSONObject("user")
+                    if (userObj.optBoolean("banned", false)) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Your account has been suspended by an administrator.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        EventHubApi.clearSession(context)
+                        onLogout()
+                    }
+                } catch (e: Exception) {
+                    val msg = e.message ?: ""
+                    if (msg.contains("suspended", ignoreCase = true) || msg.contains("403")) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Your account has been suspended by an administrator.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        EventHubApi.clearSession(context)
+                        onLogout()
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -1491,6 +1524,16 @@ fun ProfileTab(
     var activeSubTab by remember { mutableStateOf("saved") } // "saved" or "details"
     var savedTypeTab by remember { mutableStateOf("events") } // "events" or "news"
 
+    var currentPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var confirmNewPass by remember { mutableStateOf("") }
+    var showCurrentPass by remember { mutableStateOf(false) }
+    var showNewPass by remember { mutableStateOf(false) }
+    var showConfirmPass by remember { mutableStateOf(false) }
+    var passwordMsg by remember { mutableStateOf("") }
+    var passwordMsgType by remember { mutableStateOf("success") }
+    var passwordLoading by remember { mutableStateOf(false) }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? ->
@@ -1601,7 +1644,7 @@ fun ProfileTab(
             // Tab Selector Row
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Button(
                     onClick = { activeSubTab = "saved" },
@@ -1610,9 +1653,10 @@ fun ProfileTab(
                         containerColor = if (activeSubTab == "saved") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
                         contentColor = if (activeSubTab == "saved") Color.White else Color(0xFF475569)
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("Saved Items", fontWeight = FontWeight.Bold)
+                    Text("Saved Items", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
                 Button(
                     onClick = { activeSubTab = "details" },
@@ -1621,9 +1665,22 @@ fun ProfileTab(
                         containerColor = if (activeSubTab == "details") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
                         contentColor = if (activeSubTab == "details") Color.White else Color(0xFF475569)
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("Edit Details", fontWeight = FontWeight.Bold)
+                    Text("Edit Details", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                }
+                Button(
+                    onClick = { activeSubTab = "password" },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (activeSubTab == "password") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
+                        contentColor = if (activeSubTab == "password") Color.White else Color(0xFF475569)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text("Security", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1777,6 +1834,144 @@ fun ProfileTab(
                                 EventHubApi.setDarkTheme(context, isChecked)
                             }
                         )
+                    }
+                }
+            }
+        }
+
+        if (activeSubTab == "password") {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, CardBorderColor)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+                        Text("Change Password", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                        Text("Update your account credentials securely", fontSize = 11.sp, color = SubtitleTextColor)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (passwordMsg.isNotEmpty()) {
+                            Text(
+                                passwordMsg,
+                                color = if (passwordMsgType == "success") Color(0xFF065F46) else Color(0xFFDC2626),
+                                fontSize = 12.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (passwordMsgType == "success") Color(0xFFD1FAE5) else Color(0xFFFEF2F2))
+                                    .padding(10.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        OutlinedTextField(
+                            value = currentPass,
+                            onValueChange = { currentPass = it },
+                            label = { Text("Current Password") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (showCurrentPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
+                                    Icon(
+                                        imageVector = if (showCurrentPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle Visibility",
+                                        tint = SubtitleTextColor
+                                    )
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = newPass,
+                            onValueChange = { newPass = it },
+                            label = { Text("New Password") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (showNewPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showNewPass = !showNewPass }) {
+                                    Icon(
+                                        imageVector = if (showNewPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle Visibility",
+                                        tint = SubtitleTextColor
+                                    )
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = confirmNewPass,
+                            onValueChange = { confirmNewPass = it },
+                            label = { Text("Retype New Password") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = if (showConfirmPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
+                                    Icon(
+                                        imageVector = if (showConfirmPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Toggle Visibility",
+                                        tint = SubtitleTextColor
+                                    )
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = {
+                                if (currentPass.isEmpty() || newPass.isEmpty()) {
+                                    passwordMsg = "All fields are required."
+                                    passwordMsgType = "error"
+                                    return@Button
+                                }
+                                if (newPass.length < 6) {
+                                    passwordMsg = "New password must be at least 6 characters long."
+                                    passwordMsgType = "error"
+                                    return@Button
+                                }
+                                if (newPass != confirmNewPass) {
+                                    passwordMsg = "Passwords do not match."
+                                    passwordMsgType = "error"
+                                    return@Button
+                                }
+
+                                scope.launch {
+                                    passwordLoading = true
+                                    passwordMsg = ""
+                                    try {
+                                        EventHubApi.changePassword(token, currentPass, newPass)
+                                        passwordMsg = "Password changed successfully! 🎉"
+                                        passwordMsgType = "success"
+                                        currentPass = ""
+                                        newPass = ""
+                                        confirmNewPass = ""
+                                    } catch (e: Exception) {
+                                        passwordMsg = e.message ?: "Failed to update password."
+                                        passwordMsgType = "error"
+                                    } finally {
+                                        passwordLoading = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                            enabled = !passwordLoading
+                        ) {
+                            if (passwordLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("Update Password")
+                            }
+                        }
                     }
                 }
             }

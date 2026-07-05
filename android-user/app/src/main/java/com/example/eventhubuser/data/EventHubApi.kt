@@ -171,6 +171,20 @@ object EventHubApi {
         return JSONObject(apiRequest("/api/auth/me", "PUT", body, token))
     }
 
+    suspend fun getProfile(token: String): JSONObject {
+        return JSONObject(apiRequest("/api/auth/me", "GET", null, token))
+    }
+
+    suspend fun changePassword(token: String, currentPass: String, newPass: String): JSONObject {
+        val body = JSONObject().apply {
+            put("currentPassword", currentPass)
+            put("newPassword", newPass)
+        }
+        return JSONObject(apiRequest("/api/auth/change-password", "POST", body, token))
+    }
+
+
+
     // Upload image base64
     suspend fun uploadPhoto(token: String, base64Image: String): String {
         val body = JSONObject().apply {
