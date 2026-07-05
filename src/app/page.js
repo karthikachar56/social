@@ -115,6 +115,8 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
+      } else if (res.status === 403) {
+        logout();
       }
     } catch (e) {
       console.error('Fetch notifications error:', e);

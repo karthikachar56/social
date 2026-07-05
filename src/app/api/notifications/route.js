@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
+import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
 import { verifyToken } from '@/lib/auth';
 
@@ -9,6 +10,12 @@ export async function GET(req) {
     const decoded = verifyToken(req);
     if (!decoded) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (decoded.role === 'user') {
+      const dbUser = await User.findById(decoded.id);
+      if (dbUser && dbUser.banned) {
+        return NextResponse.json({ error: 'Account suspended.' }, { status: 403 });
+      }
     }
 
     // Fetch private notifications for this user AND global notifications
@@ -33,6 +40,12 @@ export async function PUT(req) {
     const decoded = verifyToken(req);
     if (!decoded) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (decoded.role === 'user') {
+      const dbUser = await User.findById(decoded.id);
+      if (dbUser && dbUser.banned) {
+        return NextResponse.json({ error: 'Account suspended.' }, { status: 403 });
+      }
     }
 
     const { id, markAll } = await req.json();

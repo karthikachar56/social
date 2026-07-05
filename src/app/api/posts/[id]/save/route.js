@@ -24,6 +24,9 @@ export async function POST(req, { params }) {
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    if (user.banned) {
+      return NextResponse.json({ error: 'Account suspended.' }, { status: 403 });
+    }
 
     // Initialize arrays if they don't exist
     if (!user.savedEvents) user.savedEvents = [];

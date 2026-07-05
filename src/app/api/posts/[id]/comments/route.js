@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
+import User from '@/lib/models/User';
 import Comment from '@/lib/models/Comment';
 import { verifyToken } from '@/lib/auth';
 
@@ -22,6 +23,12 @@ export async function POST(req, { params }) {
     const decoded = verifyToken(req);
     if (!decoded) {
       return NextResponse.json({ error: 'Authentication required to post comments.' }, { status: 401 });
+    }
+    if (decoded.role === 'user') {
+      const dbUser = await User.findById(decoded.id);
+      if (dbUser && dbUser.banned) {
+        return NextResponse.json({ error: 'Account suspended.' }, { status: 403 });
+      }
     }
 
     const { content, postType } = await req.json();
