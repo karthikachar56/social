@@ -1342,7 +1342,15 @@ fun ManageUsersTab() {
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                                        Text(
+                                            usr.getString("name"),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ContentTextColor,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             if (isBanned) "Suspended" else "Active",
