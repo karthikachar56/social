@@ -264,6 +264,10 @@ object EventHubApi {
         return JSONObject(apiRequest("/api/posts/$postId/save", "POST", body, token))
     }
 
+    suspend fun getLatestVersionInfo(): JSONObject {
+        return JSONObject(apiRequest("/version.json", "GET"))
+    }
+
     // Notifications
     suspend fun getNotifications(token: String): JSONArray {
         return JSONArray(apiRequest("/api/notifications", "GET", null, token))

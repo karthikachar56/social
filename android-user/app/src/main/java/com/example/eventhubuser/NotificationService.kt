@@ -11,22 +11,22 @@ import com.example.eventhubuser.data.EventHubApi
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class NotificationService : Service() {
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     
-    private val FOREGROUND_NOTIF_ID = 9999
     private val GENERAL_NOTIF_ID_START = 10000
     private var notificationIdCounter = GENERAL_NOTIF_ID_START
 
     private val CHANNEL_ID = "eventhub_user_channel"
-    private val FOREGROUND_CHANNEL_ID = "eventhub_sync_channel"
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
-        startForegroundService()
         startPolling()
     }
 
@@ -44,16 +44,6 @@ class NotificationService : Service() {
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            
-            // Sync channel for foreground service
-            val syncChannel = NotificationChannel(
-                FOREGROUND_CHANNEL_ID,
-                "EventHub Sync Status",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Keeps notification syncing active in the background"
-            }
-            manager.createNotificationChannel(syncChannel)
 
             // User notification channel
             val userChannel = NotificationChannel(
@@ -67,35 +57,16 @@ class NotificationService : Service() {
         }
     }
 
-    private fun startForegroundService() {
-        val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-            .setContentTitle("EventHub background sync active")
-            .setContentText("Checking for new events and news...")
-            .setSmallIcon(com.example.eventhubuser.R.mipmap.ic_launcher)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                FOREGROUND_NOTIF_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            startForeground(FOREGROUND_NOTIF_ID, notification)
-        }
-    }
-
     private fun startPolling() {
         serviceScope.launch {
             while (isActive) {
+                try {
+                    // Check for updates backgroundly without notifications
+                    checkForUpdates()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 try {
                     val token = EventHubApi.getSessionToken(applicationContext)
                     if (token != null) {
@@ -107,6 +78,71 @@ class NotificationService : Service() {
                 delay(15000) // Poll every 15 seconds
             }
         }
+    }
+
+    private suspend fun checkForUpdates() {
+        try {
+            val versionInfo = EventHubApi.getLatestVersionInfo()
+            val serverVersionCode = versionInfo.optInt("versionCode", 0)
+            val currentVersionCode = getAppVersionCode(applicationContext)
+            
+            if (serverVersionCode > currentVersionCode) {
+                val apkUrl = versionInfo.optString("apkUrl", "")
+                if (apkUrl.isNotEmpty()) {
+                    downloadAndInstallApk(applicationContext, apkUrl)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun getAppVersionCode(context: Context): Int {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode.toInt()
+            } else {
+                pInfo.versionCode
+            }
+        } catch (e: Exception) {
+            1
+        }
+    }
+
+    private suspend fun downloadAndInstallApk(context: Context, apkUrl: String) = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(apkUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.connect()
+
+            if (connection.responseCode in 200..299) {
+                val apkFile = File(context.cacheDir, "eventhub_update.apk")
+                connection.inputStream.use { input ->
+                    apkFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                launchApkInstallation(context, apkFile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun launchApkInstallation(context: Context, apkFile: File) {
+        val authority = "${context.packageName}.fileprovider"
+        val apkUri = androidx.core.content.FileProvider.getUriForFile(context, authority, apkFile)
+        
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        context.startActivity(intent)
     }
 
     private suspend fun checkForNewNotifications(token: String) {
@@ -133,9 +169,9 @@ class NotificationService : Service() {
             if (id == lastSeenId) {
                 break
             }
-            // Filter: we are only interested in new events or news posted by admins
+            // Filter: we are only interested in new events
             val type = item.optString("type")
-            if (type == "event" || type == "news") {
+            if (type == "event") {
                 newNotifications.add(item)
             }
         }
