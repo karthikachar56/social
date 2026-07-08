@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object Register : NavKey
 @Serializable data object ProfileSetup : NavKey
 @Serializable data object Dashboard : NavKey
+@Serializable data object ChangePassword : NavKey
 
 @Serializable data class EventDetail(val id: String) : NavKey
 @Serializable data class NewsDetail(val id: String) : NavKey

@@ -51,6 +51,7 @@ fun MainNavigation() {
           DashboardScreen(
             onNavigateToEventDetail = { id -> backStack.add(EventDetail(id)) },
             onNavigateToNewsDetail = { id -> backStack.add(NewsDetail(id)) },
+            onNavigateToChangePassword = { backStack.add(ChangePassword) },
             onLogout = { 
               backStack.removeLastOrNull()
               backStack.add(Login) 
@@ -66,6 +67,11 @@ fun MainNavigation() {
         entry<NewsDetail> { key ->
           NewsDetailScreen(
             newsId = key.id,
+            onBack = { backStack.removeLastOrNull() }
+          )
+        }
+        entry<ChangePassword> {
+          ChangePasswordScreen(
             onBack = { backStack.removeLastOrNull() }
           )
         }

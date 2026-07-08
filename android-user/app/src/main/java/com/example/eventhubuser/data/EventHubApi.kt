@@ -230,12 +230,18 @@ object EventHubApi {
         return newsCache!!
     }
 
-    suspend fun toggleEventLike(token: String, eventId: String): JSONObject {
-        return JSONObject(apiRequest("/api/events/$eventId/like", "POST", null, token))
+    suspend fun toggleEventLike(token: String, eventId: String, liked: Boolean): JSONObject {
+        val body = JSONObject().apply {
+            put("action", if (liked) "like" else "unlike")
+        }
+        return JSONObject(apiRequest("/api/events/$eventId/like", "POST", body, token))
     }
 
-    suspend fun toggleNewsLike(token: String, newsId: String): JSONObject {
-        return JSONObject(apiRequest("/api/news/$newsId/like", "POST", null, token))
+    suspend fun toggleNewsLike(token: String, newsId: String, liked: Boolean): JSONObject {
+        val body = JSONObject().apply {
+            put("action", if (liked) "like" else "unlike")
+        }
+        return JSONObject(apiRequest("/api/news/$newsId/like", "POST", body, token))
     }
 
     // Comments

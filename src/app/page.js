@@ -505,7 +505,17 @@ export default function Home() {
             <span className="text-lg font-bold gradient-text">EventHub</span>
           </Link>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <a 
+              href="/eventhub-user.apk" 
+              download="eventhub-user.apk"
+              className="px-3 py-1.5 rounded-xl border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100/80 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:shadow"
+              title="Download Android App (.apk)"
+            >
+              <Download className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">Get Android App</span>
+              <span className="sm:hidden">App</span>
+            </a>
             {!authLoading && (
               <>
                 {user ? (
@@ -623,7 +633,16 @@ export default function Home() {
           <h1 className="text-4xl sm:text-6xl font-black mb-4 leading-tight">
             Discover <span className="gradient-text">Events</span><br />& Latest <span class="gradient-text">News</span>
           </h1>
-          <p className="text-slate-500 text-base sm:text-lg mb-8 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
+          <p className="text-slate-500 text-base sm:text-lg mb-6 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
+          <div className="mb-10 flex flex-col sm:flex-row justify-center items-center gap-3">
+            <a 
+              href="/eventhub-user.apk" 
+              download="eventhub-user.apk"
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold text-sm shadow-lg shadow-purple-600/25 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4 text-white" /> Download EventHub Android App (.apk)
+            </a>
+          </div>
           <div className="flex items-center justify-center gap-4 text-xs sm:text-sm text-slate-500">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div> Live Updates
@@ -1310,25 +1329,17 @@ export default function Home() {
                 {role === 'user' && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                      Phone Number {user.phone ? '(Locked)' : ''}
+                      Phone Number
                     </label>
                     <div className="relative">
                       <input 
                         type="tel" 
                         value={profileForm.phone || ''}
                         onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                        disabled={!!user.phone}
-                        className={`input-field text-sm ${
-                          user.phone 
-                            ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed !pr-10' 
-                            : ''
-                        }`}
+                        className="input-field text-sm"
                         placeholder="Enter your phone number"
                         required
                       />
-                      {!!user.phone && (
-                        <Lock className="w-3.5 h-3.5 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      )}
                     </div>
                   </div>
                 )}

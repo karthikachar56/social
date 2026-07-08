@@ -29,7 +29,7 @@ export async function POST(req) {
       return NextResponse.json({
         token,
         role: 'admin',
-        user: { id: admin._id, name: admin.name, email: admin.email, avatar: admin.avatar }
+        user: { id: admin._id, name: admin.name, email: admin.email, avatar: admin.avatar, phone: admin.phone }
       });
     }
 
@@ -47,7 +47,7 @@ export async function POST(req) {
       return NextResponse.json({
         token,
         role: 'user',
-        user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar }
+        user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar, phone: user.phone }
       });
     }
 

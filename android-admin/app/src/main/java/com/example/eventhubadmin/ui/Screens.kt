@@ -18,6 +18,8 @@ import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.util.Base64
@@ -663,6 +665,7 @@ fun CreateTab() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManagePostsTab() {
     val scope = rememberCoroutineScope()
@@ -689,6 +692,7 @@ fun ManagePostsTab() {
     var newsList by remember { mutableStateOf<List<JSONObject>>(cachedNws) }
     var loading by remember { mutableStateOf(events.isEmpty() && newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
+    var refreshing by remember { mutableStateOf(false) }
 
     var editingPost by remember { mutableStateOf<JSONObject?>(null) }
     var editingPostType by remember { mutableStateOf("Event") }
@@ -750,6 +754,7 @@ fun ManagePostsTab() {
 
     val fetchPosts = {
         scope.launch {
+            if (!loading) refreshing = true
             try {
                 val evArray = EventHubApi.getEvents(force = true)
                 val evs = mutableListOf<JSONObject>()
@@ -764,10 +769,12 @@ fun ManagePostsTab() {
                     nws.add(nwArray.getJSONObject(i))
                 }
                 newsList = nws
+                errorMsg = ""
             } catch (e: Exception) {
                 errorMsg = e.message ?: "Failed to load posts."
             } finally {
                 loading = false
+                refreshing = false
             }
         }
     }
@@ -785,85 +792,91 @@ fun ManagePostsTab() {
             Text(errorMsg, color = Color(0xFFDC2626))
         }
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { fetchPosts() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Text("Manage Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-                Text("Delete posts and delete comments", fontSize = 12.sp, color = SubtitleTextColor)
-            }
-
-            item {
-                Text("Events (${events.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-            }
-
-            if (events.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    Text("No events published yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    Text("Manage Content", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                    Text("Delete posts and delete comments", fontSize = 12.sp, color = SubtitleTextColor)
                 }
-             } else {
-                items(events) { ev ->
-                    AdminPostCard(
-                        title = ev.getString("title"),
-                        category = ev.getString("category"),
-                        type = "Event",
-                        likes = ev.optInt("likes", 0),
-                        downloads = ev.optInt("downloads", 0),
-                        shares = ev.optInt("shares", 0),
-                        comments = ev.optInt("commentsCount", 0),
-                        onEdit = {
-                            editingPostType = "Event"
-                            editingPost = ev
-                        },
-                        onDelete = {
-                            scope.launch {
-                                try {
-                                    EventHubApi.deleteEvent(token, ev.getString("_id"))
-                                    fetchPosts()
-                                } catch (e: Exception) {
-                                    // Ignore
+
+                item {
+                    Text("Events (${events.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                }
+
+                if (events.isEmpty()) {
+                    item {
+                        Text("No events published yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    }
+                 } else {
+                    items(events) { ev ->
+                        AdminPostCard(
+                            title = ev.getString("title"),
+                            category = ev.getString("category"),
+                            type = "Event",
+                            likes = ev.optInt("likes", 0),
+                            downloads = ev.optInt("downloads", 0),
+                            shares = ev.optInt("shares", 0),
+                            comments = ev.optInt("commentsCount", 0),
+                            onEdit = {
+                                editingPostType = "Event"
+                                editingPost = ev
+                            },
+                            onDelete = {
+                                scope.launch {
+                                    try {
+                                        EventHubApi.deleteEvent(token, ev.getString("_id"))
+                                        fetchPosts()
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-            }
 
-            item {
-                Text("News Updates (${newsList.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-            }
-
-            if (newsList.isEmpty()) {
                 item {
-                    Text("No news updates published yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    Text("News Updates (${newsList.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
                 }
-            } else {
-                items(newsList) { ns ->
-                    AdminPostCard(
-                        title = ns.getString("title"),
-                        category = ns.getString("category"),
-                        type = "News",
-                        likes = ns.optInt("likes", 0),
-                        downloads = ns.optInt("downloads", 0),
-                        shares = ns.optInt("shares", 0),
-                        comments = ns.optInt("commentsCount", 0),
-                        onEdit = {
-                            editingPostType = "News"
-                            editingPost = ns
-                        },
-                        onDelete = {
-                            scope.launch {
-                                try {
-                                    EventHubApi.deleteNews(token, ns.getString("_id"))
-                                    fetchPosts()
-                                } catch (e: Exception) {
-                                    // Ignore
+
+                if (newsList.isEmpty()) {
+                    item {
+                        Text("No news updates published yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    }
+                } else {
+                    items(newsList) { ns ->
+                        AdminPostCard(
+                            title = ns.getString("title"),
+                            category = ns.getString("category"),
+                            type = "News",
+                            likes = ns.optInt("likes", 0),
+                            downloads = ns.optInt("downloads", 0),
+                            shares = ns.optInt("shares", 0),
+                            comments = ns.optInt("commentsCount", 0),
+                            onEdit = {
+                                editingPostType = "News"
+                                editingPost = ns
+                            },
+                            onDelete = {
+                                scope.launch {
+                                    try {
+                                        EventHubApi.deleteNews(token, ns.getString("_id"))
+                                        fetchPosts()
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -1221,6 +1234,7 @@ fun AdminPostCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageUsersTab() {
     val scope = rememberCoroutineScope()
@@ -1229,9 +1243,11 @@ fun ManageUsersTab() {
     var users by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf("") }
+    var refreshing by remember { mutableStateOf(false) }
 
     val fetchUsers = {
         scope.launch {
+            if (!loading) refreshing = true
             try {
                 val array = EventHubApi.getUsers(token)
                 val list = mutableListOf<JSONObject>()
@@ -1239,10 +1255,12 @@ fun ManageUsersTab() {
                     list.add(array.getJSONObject(i))
                 }
                 users = list
+                errorMsg = ""
             } catch (e: Exception) {
                 errorMsg = e.message ?: "Failed to load users."
             } finally {
                 loading = false
+                refreshing = false
             }
         }
     }
@@ -1260,123 +1278,129 @@ fun ManageUsersTab() {
             Text(errorMsg, color = Color(0xFFDC2626))
         }
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { fetchUsers() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Text("Registered Users", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-                Text("Manage account status access", fontSize = 12.sp, color = SubtitleTextColor)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (users.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 item {
-                    Text("No users registered yet.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                    Text("Registered Users", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                    Text("Manage account status access", fontSize = 12.sp, color = SubtitleTextColor)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            } else {
-                items(users) { usr ->
-                    val isBanned = usr.optBoolean("banned", false)
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = CardBgColor),
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+
+                if (users.isEmpty()) {
+                    item {
+                        Text("No users registered yet.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                    }
+                } else {
+                    items(users) { usr ->
+                        val isBanned = usr.optBoolean("banned", false)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                            border = BorderStroke(1.dp, CardBorderColor)
                         ) {
-                            val avatar = usr.optString("avatar", "")
-                            if (avatar.isNotEmpty()) {
-                                AsyncImage(
-                                    model = formatImageUrl(avatar),
-                                    contentDescription = "User Avatar",
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape),
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFE2E8F0)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        if (usr.getString("name").isNotEmpty()) usr.getString("name")[0].uppercaseChar().toString() else "U",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = SubtitleTextColor
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        if (isBanned) "Suspended" else "Active",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isBanned) Color(0xFFDC2626) else Color(0xFF059669),
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                val avatar = usr.optString("avatar", "")
+                                if (avatar.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = formatImageUrl(avatar),
+                                        contentDescription = "User Avatar",
                                         modifier = Modifier
-                                            .background(if (isBanned) Color(0xFFFEF2F2) else Color(0xFFECFDF5))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .size(36.dp)
+                                            .clip(CircleShape),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                     )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFE2E8F0)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            if (usr.getString("name").isNotEmpty()) usr.getString("name")[0].uppercaseChar().toString() else "U",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SubtitleTextColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
                                 }
-                                Text(usr.getString("email"), fontSize = 12.sp, color = Color.Gray)
-                                if (usr.has("phone") && usr.getString("phone").isNotEmpty()) {
-                                    Text("Phone: ${usr.getString("phone")}", fontSize = 11.sp, color = Color.Gray)
-                                }
-                            }
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            try {
-                                                EventHubApi.toggleUserBan(token, usr.getString("_id"), !isBanned)
-                                                fetchUsers()
-                                                android.widget.Toast.makeText(context, if (isBanned) "User reactivated! ✓" else "User suspended! ✓", android.widget.Toast.LENGTH_SHORT).show()
-                                            } catch (e: Exception) {
-                                                android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isBanned) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
-                                        contentColor = if (isBanned) Color(0xFF059669) else Color(0xFFDC2626)
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp)
-                                ) {
-                                    Text(if (isBanned) "Reactivate" else "Suspend", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(usr.getString("name"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            if (isBanned) "Suspended" else "Active",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isBanned) Color(0xFFDC2626) else Color(0xFF059669),
+                                            modifier = Modifier
+                                                .background(if (isBanned) Color(0xFFFEF2F2) else Color(0xFFECFDF5))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Text(usr.getString("email"), fontSize = 12.sp, color = Color.Gray)
+                                    if (usr.has("phone") && usr.getString("phone").isNotEmpty()) {
+                                        Text("Phone: ${usr.getString("phone")}", fontSize = 11.sp, color = Color.Gray)
+                                    }
                                 }
-                                
-                                Spacer(modifier = Modifier.width(4.dp))
-                                
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            try {
-                                                EventHubApi.deleteUser(token, usr.getString("_id"))
-                                                fetchUsers()
-                                                android.widget.Toast.makeText(context, "User deleted successfully! ✓", android.widget.Toast.LENGTH_SHORT).show()
-                                            } catch (e: Exception) {
-                                                android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    EventHubApi.toggleUserBan(token, usr.getString("_id"), !isBanned)
+                                                    fetchUsers()
+                                                    android.widget.Toast.makeText(context, if (isBanned) "User reactivated! ✓" else "User suspended! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                                                } catch (e: Exception) {
+                                                    android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
+                                                }
                                             }
-                                        }
-                                    },
-                                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFDC2626))
-                                ) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete User", modifier = Modifier.size(20.dp))
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isBanned) Color(0xFFECFDF5) else Color(0xFFFEF2F2),
+                                            contentColor = if (isBanned) Color(0xFF059669) else Color(0xFFDC2626)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp)
+                                    ) {
+                                        Text(if (isBanned) "Reactivate" else "Suspend", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    
+                                    IconButton(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    EventHubApi.deleteUser(token, usr.getString("_id"))
+                                                    fetchUsers()
+                                                    android.widget.Toast.makeText(context, "User deleted successfully! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                                                } catch (e: Exception) {
+                                                    android.widget.Toast.makeText(context, e.message ?: "Failed", android.widget.Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        },
+                                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color(0xFFDC2626))
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete User", modifier = Modifier.size(20.dp))
+                                    }
                                 }
                             }
                         }
@@ -1942,6 +1966,7 @@ fun AdminDashboardTab() {
     val context = LocalContext.current
     val token = remember { EventHubApi.getSessionToken(context) ?: "" }
     val user = remember { EventHubApi.getSessionUser(context) }
+    var refreshing by remember { mutableStateOf(false) }
 
     var feedTab by remember { mutableStateOf(0) } // 0 = Events, 1 = News
 
@@ -1982,6 +2007,7 @@ fun AdminDashboardTab() {
 
     val fetchPosts = {
         scope.launch {
+            if (!loading) refreshing = true
             try {
                 val evArray = EventHubApi.getEvents(force = true)
                 val evs = mutableListOf<JSONObject>()
@@ -1996,10 +2022,12 @@ fun AdminDashboardTab() {
                     nws.add(nwArray.getJSONObject(i))
                 }
                 newsList = nws
+                errorMsg = ""
             } catch (e: Exception) {
                 errorMsg = e.message ?: "Failed to load posts."
             } finally {
                 loading = false
+                refreshing = false
             }
         }
     }
@@ -2039,91 +2067,96 @@ fun AdminDashboardTab() {
                     Text("Latest News", modifier = Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = { fetchPosts() },
+                modifier = Modifier.fillMaxSize().weight(1f)
             ) {
-                item {
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search feed...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6366F1))
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        // Search Bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text(if (feedTab == 0) "Search events..." else "Search news...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6366F1))
+                        )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    // Scrollable category row
-                    androidx.compose.foundation.lazy.LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                        // Categories
                         val cats = if (feedTab == 0) eventCategories else newsCategories
-                        items(cats) { cat ->
-                            CategoryChip(
-                                text = cat,
-                                selected = selectedCategory == cat,
-                                onClick = { selectedCategory = cat }
-                            )
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(cats) { cat ->
+                                CategoryChip(
+                                    text = cat,
+                                    selected = selectedCategory == cat,
+                                    onClick = { selectedCategory = cat }
+                                )
+                            }
                         }
                     }
-                }
 
-                if (feedTab == 0) {
-                    val filteredEvents = events.filter {
-                        (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
-                        (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("description").contains(searchQuery, ignoreCase = true))
-                    }
+                    if (feedTab == 0) {
+                        val filtered = events.filter {
+                            (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+                            (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("description").contains(searchQuery, ignoreCase = true))
+                        }
 
-                    if (filteredEvents.isEmpty()) {
-                        item {
-                            Text("No events found.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                        if (filtered.isEmpty()) {
+                            item {
+                                Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                            }
+                        } else {
+                            items(filtered) { ev ->
+                                FeedCard(
+                                    title = ev.getString("title"),
+                                    category = ev.getString("category"),
+                                    image = ev.optString("image", ""),
+                                    creator = ev.getString("adminName"),
+                                    date = ev.getString("date"),
+                                    typeLabel = "Event",
+                                    onClick = {
+                                        previewPostType = "event"
+                                        previewPost = ev
+                                    }
+                                )
+                            }
                         }
                     } else {
-                        items(filteredEvents) { ev ->
-                            FeedCard(
-                                title = ev.getString("title"),
-                                category = ev.getString("category"),
-                                image = ev.optString("image", ""),
-                                creator = ev.getString("adminName"),
-                                date = ev.getString("date"),
-                                typeLabel = "Event",
-                                onClick = {
-                                    previewPostType = "event"
-                                    previewPost = ev
-                                }
-                            )
+                        val filtered = newsList.filter {
+                            (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
+                            (it.getString("title").contains(searchQuery, ignoreCase = true) || it.optString("summary", "").contains(searchQuery, ignoreCase = true))
                         }
-                    }
-                } else {
-                    val filteredNews = newsList.filter {
-                        (selectedCategory == "All" || it.getString("category").equals(selectedCategory, ignoreCase = true)) &&
-                        (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("content").contains(searchQuery, ignoreCase = true))
-                    }
 
-                    if (filteredNews.isEmpty()) {
-                        item {
-                            Text("No news updates found.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
-                        }
-                    } else {
-                        items(filteredNews) { ns ->
-                            FeedCard(
-                                title = ns.getString("title"),
-                                category = ns.getString("category"),
-                                image = ns.optString("image", ""),
-                                creator = ns.getString("adminName"),
-                                date = ns.optString("createdAt", ""),
-                                typeLabel = "News",
-                                onClick = {
-                                    previewPostType = "news"
-                                    previewPost = ns
-                                }
-                            )
+                        if (filtered.isEmpty()) {
+                            item {
+                                Text("No news articles match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = Color.Gray)
+                            }
+                        } else {
+                            items(filtered) { ns ->
+                                FeedCard(
+                                    title = ns.getString("title"),
+                                    category = ns.getString("category"),
+                                    image = ns.optString("image", ""),
+                                    creator = ns.getString("adminName"),
+                                    date = ns.optString("createdAt", ""),
+                                    typeLabel = "News",
+                                    onClick = {
+                                        previewPostType = "news"
+                                        previewPost = ns
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -2154,15 +2187,21 @@ fun AdminDashboardTab() {
                     if (imgUrl.isNotEmpty()) {
                         val imageModel = formatImageUrl(imgUrl)
                         if (imageModel != null) {
-                            AsyncImage(
-                                model = imageModel,
-                                contentDescription = "Post Image",
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(160.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Black.copy(alpha = 0.05f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = imageModel,
+                                    contentDescription = "Post Image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
                         }
                     }
 
@@ -2183,9 +2222,9 @@ fun AdminDashboardTab() {
                     )
 
                     // Likes bar
-                    val isLiked = remember(post) {
-                        post.optInt("likes", 0)
-                    }
+                    val eventId = post.getString("_id")
+                    var adminLiked by remember(eventId) { mutableStateOf(EventHubApi.isLiked(context, eventId)) }
+                    var likesCountState by remember(eventId) { mutableStateOf(post.optInt("likes", 0)) }
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2194,27 +2233,36 @@ fun AdminDashboardTab() {
                         Button(
                             onClick = {
                                 scope.launch {
+                                    val likedNow = EventHubApi.toggleLocalLike(context, eventId)
+                                    adminLiked = likedNow
+                                    val prevLikes = likesCountState
+                                    likesCountState = prevLikes + if (likedNow) 1 else -1
                                     try {
-                                        val res = EventHubApi.toggleLike(token, post.getString("_id"), previewPostType)
-                                        val newLikes = res.getInt("likes")
-                                        val updatedPost = JSONObject(post.toString()).put("likes", newLikes)
+                                        val res = EventHubApi.toggleLike(token, eventId, previewPostType, likedNow)
+                                        likesCountState = res.getInt("likes")
+                                        val updatedPost = JSONObject(post.toString()).put("likes", likesCountState)
                                         previewPost = updatedPost
                                         fetchPosts()
                                     } catch (e: Exception) {
-                                        // Ignore
+                                        adminLiked = !likedNow
+                                        likesCountState = prevLikes
                                     }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFEEF2F6),
-                                contentColor = Color(0xFFDB2777)
+                                containerColor = if (adminLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                contentColor = if (adminLiked) Color(0xFFEC4899) else Color(0xFF64748B)
                             ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Favorite, contentDescription = "Likes", modifier = Modifier.size(14.dp))
+                            Icon(
+                                imageVector = if (adminLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Likes",
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("$isLiked", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("$likesCountState", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -2497,14 +2545,20 @@ fun FeedCard(title: String, category: String, image: String, creator: String, da
             if (image.isNotEmpty()) {
                 val imageModel = formatImageUrl(image)
                 if (imageModel != null) {
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = "Card Image",
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(130.dp),
-                        contentScale = ContentScale.Crop
-                    )
+                            .height(130.dp)
+                            .background(Color.Black.copy(alpha = 0.05f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = "Card Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
             }
             Column(modifier = Modifier.padding(14.dp)) {

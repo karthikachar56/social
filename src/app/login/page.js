@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Zap, Mail, Lock, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Zap, Mail, Lock, AlertCircle, ArrowLeft, ArrowRight, Download } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -148,14 +148,22 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-200/50 text-center text-xs space-y-2">
+          <div className="mt-6 pt-6 border-t border-slate-200/50 text-center text-xs space-y-4">
             <p className="text-slate-500">
               Don't have an account?{' '}
               <Link href="/register" className="text-purple-400 hover:text-purple-800 font-semibold underline">
                 Sign Up
               </Link>
             </p>
-
+            <div className="pt-2">
+              <a 
+                href="/eventhub-user.apk" 
+                download="eventhub-user.apk"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-50 border border-purple-100 hover:bg-purple-100/70 text-xs font-bold text-purple-700 transition"
+              >
+                <Download className="w-3.5 h-3.5" /> Download EventHub Android App (.apk)
+              </a>
+            </div>
           </div>
         </div>
 

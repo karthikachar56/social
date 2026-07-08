@@ -68,6 +68,37 @@ object EventHubApi {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
     }
+ 
+    // Memory Cache for liked posts
+    private var likedPostsCache: MutableSet<String>? = null
+
+    private fun getLikedPosts(context: Context): Set<String> {
+        if (likedPostsCache == null) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            likedPostsCache = (prefs.getStringSet("liked_posts", emptySet()) ?: emptySet()).toMutableSet()
+        }
+        return likedPostsCache!!
+    }
+
+    fun isLiked(context: Context, id: String): Boolean {
+        return getLikedPosts(context).contains(id)
+    }
+
+    fun toggleLocalLike(context: Context, id: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val set = getLikedPosts(context).toMutableSet()
+        val liked: Boolean
+        if (set.contains(id)) {
+            set.remove(id)
+            liked = false
+        } else {
+            set.add(id)
+            liked = true
+        }
+        likedPostsCache = set
+        prefs.edit().putStringSet("liked_posts", set).apply()
+        return liked
+    }
 
     // Generic Request helper using HttpURLConnection
     private suspend fun apiRequest(
@@ -246,9 +277,17 @@ object EventHubApi {
         return JSONObject(apiRequest("/api/posts/$postId/comments", "POST", body, token))
     }
 
-    suspend fun toggleLike(token: String, postId: String, postType: String): JSONObject {
+    suspend fun toggleLike(token: String, postId: String, postType: String, liked: Boolean): JSONObject {
         val typePath = if (postType == "event") "events" else "news"
-        return JSONObject(apiRequest("/api/$typePath/$postId/like", "POST", null, token))
+        val body = JSONObject().apply {
+            put("action", if (liked) "like" else "unlike")
+        }
+        return JSONObject(apiRequest("/api/$typePath/$postId/like", "POST", body, token))
+    }
+
+    // Notifications
+    suspend fun getNotifications(token: String): JSONArray {
+        return JSONArray(apiRequest("/api/notifications", "GET", null, token))
     }
 
     // User management

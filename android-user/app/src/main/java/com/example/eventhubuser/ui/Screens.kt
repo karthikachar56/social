@@ -10,6 +10,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -373,8 +377,8 @@ fun ProfileSetupScreen(
     val user = remember { EventHubApi.getSessionUser(context) }
 
     var displayName by remember { mutableStateOf(user.name) }
-    var phone by remember { mutableStateOf("") }
-    var avatarUrl by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf(user.phone) }
+    var avatarUrl by remember { mutableStateOf(user.avatar) }
     var errorMsg by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
 
@@ -533,11 +537,11 @@ fun ProfileSetupScreen(
                                         phone = phone.trim()
                                     )
                                     val userObj = res.getJSONObject("user")
-                                    val savedName = userObj.getString("name")
-                                    val savedPhone = userObj.getString("phone")
-                                    val savedAvatar = userObj.getString("avatar")
+                                    val savedName = userObj.optString("name", "")
+                                    val savedPhone = userObj.optString("phone", "")
+                                    val savedAvatar = userObj.optString("avatar", "")
 
-                                    val id = userObj.getString("id")
+                                    val id = userObj.optString("id", userObj.optString("_id", ""))
                                     val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
                                     val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
                                     EventHubApi.saveSession(
@@ -586,6 +590,7 @@ fun ProfileSetupScreen(
 fun DashboardScreen(
     onNavigateToEventDetail: (String) -> Unit,
     onNavigateToNewsDetail: (String) -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -664,12 +669,18 @@ fun DashboardScreen(
                 0 -> EventsTab(onNavigateToEventDetail)
                 1 -> NewsTab(onNavigateToNewsDetail)
                 2 -> AlertsTab()
-                3 -> ProfileTab(onNavigateToEventDetail, onNavigateToNewsDetail, onLogout)
+                3 -> ProfileTab(
+                    onNavigateToEventDetail = onNavigateToEventDetail,
+                    onNavigateToNewsDetail = onNavigateToNewsDetail,
+                    onNavigateToChangePassword = onNavigateToChangePassword,
+                    onLogout = onLogout
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
@@ -677,11 +688,30 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
     var events by remember { mutableStateOf<List<JSONObject>>(EventHubApi.getCachedEvents()) }
     var loading by remember { mutableStateOf(events.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
+    var refreshing by remember { mutableStateOf(false) }
 
     // Filters states matching web
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "General", "Academic", "Cultural", "Sports", "Tech")
+
+    val onRefresh = {
+        scope.launch {
+            refreshing = true
+            try {
+                val array = EventHubApi.getEvents(force = true)
+                val list = mutableListOf<JSONObject>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getJSONObject(i))
+                }
+                events = list
+                errorMsg = ""
+            } catch (e: Exception) {
+            } finally {
+                refreshing = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -718,54 +748,60 @@ fun EventsTab(onNavigateToEventDetail: (String) -> Unit) {
             (it.getString("title").contains(searchQuery, ignoreCase = true) || it.getString("description").contains(searchQuery, ignoreCase = true))
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { onRefresh() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                EventHubHeroHeader(
-                    title = "Discover Events\n& Latest News",
-                    subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
-                    eventsCount = events.size,
-                    newsCount = 0
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    EventHubHeroHeader(
+                        title = "Discover Events\n& Latest News",
+                        subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
+                        eventsCount = events.size,
+                        newsCount = 0
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search events...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
-                )
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search events...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Scrollable category row
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(categories) { cat ->
-                        CategoryChip(
-                            text = cat,
-                            selected = selectedCategory == cat,
-                            onClick = { selectedCategory = cat }
-                        )
+                    // Scrollable category row
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(categories) { cat ->
+                            CategoryChip(
+                                text = cat,
+                                selected = selectedCategory == cat,
+                                onClick = { selectedCategory = cat }
+                            )
+                        }
                     }
                 }
-            }
 
-            if (filteredEvents.isEmpty()) {
-                item {
-                    Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
-                }
-            } else {
-                items(filteredEvents) { ev ->
-                    EventCard(ev, onClick = { onNavigateToEventDetail(ev.getString("_id")) })
+                if (filteredEvents.isEmpty()) {
+                    item {
+                        Text("No events match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
+                    }
+                } else {
+                    items(filteredEvents) { ev ->
+                        EventCard(ev, onClick = { onNavigateToEventDetail(ev.getString("_id")) })
+                    }
                 }
             }
         }
@@ -794,14 +830,20 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
         Column {
             val imgUrl = event.optString("image", "")
             if (imgUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = EventHubApi.formatImageUrl(imgUrl),
-                    contentDescription = "Event Cover",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp),
-                    contentScale = ContentScale.Crop
-                )
+                        .height(160.dp)
+                        .background(Color.Black.copy(alpha = 0.05f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = EventHubApi.formatImageUrl(imgUrl),
+                        contentDescription = "Event Cover",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -892,7 +934,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                                     val likedNow = EventHubApi.toggleLike(context, eventId)
                                     isLiked.value = likedNow
                                     try {
-                                        val res = EventHubApi.toggleEventLike(token, eventId)
+                                        val res = EventHubApi.toggleEventLike(token, eventId, likedNow)
                                         likesCount.value = res.getInt("likes")
                                     } catch (e: Exception) {
                                         likesCount.value = likesCount.value + if (likedNow) 1 else -1
@@ -963,7 +1005,10 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
                                         putExtra(android.content.Intent.EXTRA_SUBJECT, title)
                                         putExtra(android.content.Intent.EXTRA_TEXT, "Check out this event on EventHub: $title\nhttps://social-eetirp.vercel.app/events/$eventId")
                                     }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                    val chooser = android.content.Intent.createChooser(shareIntent, "Share via").apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(chooser)
                                 }
                             },
                             modifier = Modifier.size(32.dp)
@@ -1028,6 +1073,7 @@ fun EventCard(event: JSONObject, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
@@ -1035,11 +1081,30 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
     var newsList by remember { mutableStateOf<List<JSONObject>>(EventHubApi.getCachedNews()) }
     var loading by remember { mutableStateOf(newsList.isEmpty()) }
     var errorMsg by remember { mutableStateOf("") }
+    var refreshing by remember { mutableStateOf(false) }
 
     // Filters states matching web
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "General", "Announcement", "Urgent")
+
+    val onRefresh = {
+        scope.launch {
+            refreshing = true
+            try {
+                val array = EventHubApi.getNews(force = true)
+                val list = mutableListOf<JSONObject>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getJSONObject(i))
+                }
+                newsList = list
+                errorMsg = ""
+            } catch (e: Exception) {
+            } finally {
+                refreshing = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -1076,54 +1141,60 @@ fun NewsTab(onNavigateToNewsDetail: (String) -> Unit) {
             (it.getString("title").contains(searchQuery, ignoreCase = true) || it.optString("summary", "").contains(searchQuery, ignoreCase = true))
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { onRefresh() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                EventHubHeroHeader(
-                    title = "Discover Events\n& Latest News",
-                    subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
-                    eventsCount = 0,
-                    newsCount = newsList.size
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    EventHubHeroHeader(
+                        title = "Discover Events\n& Latest News",
+                        subtitle = "Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.",
+                        eventsCount = 0,
+                        newsCount = newsList.size
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search news...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
-                )
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search news...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF8B5CF6))
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Scrollable category row
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(categories) { cat ->
-                        CategoryChip(
-                            text = cat,
-                            selected = selectedCategory == cat,
-                            onClick = { selectedCategory = cat }
-                        )
+                    // Scrollable category row
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(categories) { cat ->
+                            CategoryChip(
+                                text = cat,
+                                selected = selectedCategory == cat,
+                                onClick = { selectedCategory = cat }
+                            )
+                        }
                     }
                 }
-            }
 
-            if (filteredNews.isEmpty()) {
-                item {
-                    Text("No news match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
-                }
-            } else {
-                items(filteredNews) { ns ->
-                    NewsCard(ns, onClick = { onNavigateToNewsDetail(ns.getString("_id")) })
+                if (filteredNews.isEmpty()) {
+                    item {
+                        Text("No news match your criteria.", modifier = Modifier.fillMaxWidth().padding(40.dp), textAlign = TextAlign.Center, color = SubtitleTextColor)
+                    }
+                } else {
+                    items(filteredNews) { ns ->
+                        NewsCard(ns, onClick = { onNavigateToNewsDetail(ns.getString("_id")) })
+                    }
                 }
             }
         }
@@ -1153,14 +1224,20 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
         Column {
             val imgUrl = news.optString("image", "")
             if (imgUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = EventHubApi.formatImageUrl(imgUrl),
-                    contentDescription = "News Cover",
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp),
-                    contentScale = ContentScale.Crop
-                )
+                        .height(160.dp)
+                        .background(Color.Black.copy(alpha = 0.05f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = EventHubApi.formatImageUrl(imgUrl),
+                        contentDescription = "News Cover",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -1244,7 +1321,7 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                                     val likedNow = EventHubApi.toggleLike(context, newsId)
                                     isLiked.value = likedNow
                                     try {
-                                        val res = EventHubApi.toggleNewsLike(token, newsId)
+                                        val res = EventHubApi.toggleNewsLike(token, newsId, likedNow)
                                         likesCount.value = res.getInt("likes")
                                     } catch (e: Exception) {
                                         likesCount.value = likesCount.value + if (likedNow) 1 else -1
@@ -1315,7 +1392,10 @@ fun NewsCard(news: JSONObject, onClick: () -> Unit) {
                                         putExtra(android.content.Intent.EXTRA_SUBJECT, title)
                                         putExtra(android.content.Intent.EXTRA_TEXT, "Check out this news on EventHub: $title\nhttps://social-eetirp.vercel.app/news/$newsId")
                                     }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                    val chooser = android.content.Intent.createChooser(shareIntent, "Share via").apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(chooser)
                                 }
                             },
                             modifier = Modifier.size(32.dp)
@@ -1440,60 +1520,80 @@ fun AlertsTab() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (loading) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF8B5CF6))
-            }
-        } else if (errorMsg.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text(errorMsg, color = Color(0xFFDC2626))
-            }
-        } else if (notifications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("No recent alerts.", color = SubtitleTextColor)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(notifications) { notif ->
-                    val isRead = notif.optBoolean("read", false)
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (!isRead) {
-                                    scope.launch {
-                                        try {
-                                            EventHubApi.markNotificationRead(token, notif.getString("_id"))
-                                            fetchNotifications()
-                                        } catch (e: Exception) {
-                                            // Ignore
+        var refreshing by remember { mutableStateOf(false) }
+
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    refreshing = true
+                    fetchNotifications()
+                    refreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        ) {
+            if (loading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF8B5CF6))
+                }
+            } else if (errorMsg.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMsg, color = Color(0xFFDC2626))
+                }
+            } else if (notifications.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("No recent alerts.", color = SubtitleTextColor)
+                    Spacer(modifier = Modifier.height(150.dp))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 200.dp)
+                ) {
+                    items(notifications) { notif ->
+                        val isRead = notif.optBoolean("read", false)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (!isRead) {
+                                        scope.launch {
+                                            try {
+                                                EventHubApi.markNotificationRead(token, notif.getString("_id"))
+                                                fetchNotifications()
+                                            } catch (e: Exception) {
+                                                // Ignore
+                                            }
                                         }
                                     }
-                                }
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isRead) Color.White else Color(0xFFF5F3FF)
-                        ),
-                        border = BorderStroke(1.dp, if (isRead) CardBorderColor else Color(0xFFDDD6FE)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isRead) Color.Transparent else Color(0xFF8B5CF6))
-                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                notif.getString("message"),
-                                fontSize = 13.sp,
-                                color = if (isRead) Color(0xFF475569) else Color(0xFF1E293B),
-                                modifier = Modifier.weight(1f)
-                            )
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isRead) Color.White else Color(0xFFF5F3FF)
+                            ),
+                            border = BorderStroke(1.dp, if (isRead) CardBorderColor else Color(0xFFDDD6FE)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isRead) Color.Transparent else Color(0xFF8B5CF6))
+                                 )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    notif.getString("message"),
+                                    fontSize = 13.sp,
+                                    color = if (isRead) Color(0xFF475569) else Color(0xFF1E293B),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -1507,6 +1607,7 @@ fun AlertsTab() {
 fun ProfileTab(
     onNavigateToEventDetail: (String) -> Unit,
     onNavigateToNewsDetail: (String) -> Unit,
+    onNavigateToChangePassword: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1524,16 +1625,6 @@ fun ProfileTab(
     var activeSubTab by remember { mutableStateOf("saved") } // "saved" or "details"
     var savedTypeTab by remember { mutableStateOf("events") } // "events" or "news"
 
-    var currentPass by remember { mutableStateOf("") }
-    var newPass by remember { mutableStateOf("") }
-    var confirmNewPass by remember { mutableStateOf("") }
-    var showCurrentPass by remember { mutableStateOf(false) }
-    var showNewPass by remember { mutableStateOf(false) }
-    var showConfirmPass by remember { mutableStateOf(false) }
-    var passwordMsg by remember { mutableStateOf("") }
-    var passwordMsgType by remember { mutableStateOf("success") }
-    var passwordLoading by remember { mutableStateOf(false) }
-
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? ->
@@ -1550,19 +1641,20 @@ fun ProfileTab(
                         token = token,
                         name = nameInput.trim(),
                         avatar = cloudUrl,
-                        phone = if (user.phone.isEmpty()) phoneInput.trim() else user.phone
+                        phone = phoneInput.trim()
                     )
                     val userObj = res.getJSONObject("user")
-                    val savedName = userObj.getString("name")
+                    val savedName = userObj.optString("name", "")
                     val savedPhone = userObj.optString("phone", "")
                     val savedAvatar = userObj.optString("avatar", "")
                     val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
                     val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+                    val id = userObj.optString("id", userObj.optString("_id", ""))
 
                     EventHubApi.saveSession(
                         context,
                         token,
-                        userObj.getString("id"),
+                        id,
                         savedName,
                         user.email,
                         savedPhone,
@@ -1583,12 +1675,56 @@ fun ProfileTab(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    var refreshing by remember { mutableStateOf(false) }
+
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            scope.launch {
+                refreshing = true
+                try {
+                    val res = EventHubApi.getProfile(token)
+                    val userObj = res.getJSONObject("user")
+                    val savedName = userObj.optString("name", "")
+                    val savedPhone = userObj.optString("phone", "")
+                    val savedAvatar = userObj.optString("avatar", "")
+                    val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                    val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+                    val id = userObj.optString("id", userObj.optString("_id", ""))
+
+                    EventHubApi.saveSession(
+                        context,
+                        token,
+                        id,
+                        savedName,
+                        user.email,
+                        savedPhone,
+                        savedAvatar,
+                        savedEvs,
+                        savedNws
+                    )
+                    user = EventHubApi.getSessionUser(context)
+                    nameInput = savedName
+                    phoneInput = savedPhone
+                    avatarUrl = savedAvatar
+                    android.widget.Toast.makeText(context, "Profile refreshed successfully! ✓", android.widget.Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    android.widget.Toast.makeText(context, "Refresh failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                } finally {
+                    refreshing = false
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
     ) {
-        item {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 300.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
                 modifier = Modifier
                     .size(84.dp)
@@ -1670,24 +1806,10 @@ fun ProfileTab(
                 ) {
                     Text("Edit Details", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
-                Button(
-                    onClick = { activeSubTab = "password" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (activeSubTab == "password") Color(0xFF8B5CF6) else Color(0xFFEEF2F6),
-                        contentColor = if (activeSubTab == "password") Color.White else Color(0xFF475569)
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text("Security", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                }
             }
             Spacer(modifier = Modifier.height(16.dp))
-        }
 
         if (activeSubTab == "details") {
-            item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = CardBgColor),
@@ -1734,12 +1856,8 @@ fun ProfileTab(
 
                         OutlinedTextField(
                             value = phoneInput,
-                            onValueChange = { if (user.phone.isEmpty()) phoneInput = it },
-                            label = { Text(if (user.phone.isNotEmpty()) "Phone Number (Locked)" else "Phone Number") },
-                            enabled = user.phone.isEmpty(),
-                            leadingIcon = if (user.phone.isNotEmpty()) {
-                                { Icon(Icons.Default.Lock, contentDescription = "Locked", tint = Color.Gray) }
-                            } else null,
+                            onValueChange = { phoneInput = it },
+                            label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -1761,16 +1879,16 @@ fun ProfileTab(
                                             token = token,
                                             name = nameInput.trim(),
                                             avatar = avatarUrl,
-                                            phone = if (user.phone.isEmpty()) phoneInput.trim() else user.phone
+                                            phone = phoneInput.trim()
                                         )
                                         val userObj = res.getJSONObject("user")
-                                        val savedName = userObj.getString("name")
-                                        val savedPhone = userObj.getString("phone")
-                                        val savedAvatar = userObj.getString("avatar")
+                                        val savedName = userObj.optString("name", "")
+                                        val savedPhone = userObj.optString("phone", "")
+                                        val savedAvatar = userObj.optString("avatar", "")
                                         val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
                                         val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
 
-                                        val id = userObj.getString("id")
+                                        val id = userObj.optString("id", userObj.optString("_id", ""))
                                         EventHubApi.saveSession(
                                             context,
                                             token,
@@ -1803,182 +1921,67 @@ fun ProfileTab(
                             } else {
                                 Text("Save Changes")
                             }
-                        }
                     }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = CardBgColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, CardBorderColor)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Dark Theme Mode", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-                            Text("Adjust system visual theme style", fontSize = 11.sp, color = SubtitleTextColor)
-                        }
-                        Switch(
-                            checked = ThemeState.isDarkTheme,
-                            onCheckedChange = { isChecked ->
-                                ThemeState.isDarkTheme = isChecked
-                                EventHubApi.setDarkTheme(context, isChecked)
-                            }
-                        )
+                    Column {
+                        Text("Dark Theme Mode", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                        Text("Adjust system visual theme style", fontSize = 11.sp, color = SubtitleTextColor)
                     }
+                    Switch(
+                        checked = ThemeState.isDarkTheme,
+                        onCheckedChange = { isChecked ->
+                            ThemeState.isDarkTheme = isChecked
+                            EventHubApi.setDarkTheme(context, isChecked)
+                        }
+                    )
                 }
             }
-        }
 
-        if (activeSubTab == "password") {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = CardBgColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, CardBorderColor)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onNavigateToChangePassword() },
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                        Text("Change Password", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
-                        Text("Update your account credentials securely", fontSize = 11.sp, color = SubtitleTextColor)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        if (passwordMsg.isNotEmpty()) {
-                            Text(
-                                passwordMsg,
-                                color = if (passwordMsgType == "success") Color(0xFF065F46) else Color(0xFFDC2626),
-                                fontSize = 12.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(if (passwordMsgType == "success") Color(0xFFD1FAE5) else Color(0xFFFEF2F2))
-                                    .padding(10.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        OutlinedTextField(
-                            value = currentPass,
-                            onValueChange = { currentPass = it },
-                            label = { Text("Current Password") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            visualTransformation = if (showCurrentPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
-                                    Icon(
-                                        imageVector = if (showCurrentPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = "Toggle Visibility",
-                                        tint = SubtitleTextColor
-                                    )
-                                }
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = newPass,
-                            onValueChange = { newPass = it },
-                            label = { Text("New Password") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            visualTransformation = if (showNewPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                IconButton(onClick = { showNewPass = !showNewPass }) {
-                                    Icon(
-                                        imageVector = if (showNewPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = "Toggle Visibility",
-                                        tint = SubtitleTextColor
-                                    )
-                                }
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = confirmNewPass,
-                            onValueChange = { confirmNewPass = it },
-                            label = { Text("Retype New Password") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            visualTransformation = if (showConfirmPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
-                                    Icon(
-                                        imageVector = if (showConfirmPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = "Toggle Visibility",
-                                        tint = SubtitleTextColor
-                                    )
-                                }
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = {
-                                if (currentPass.isEmpty() || newPass.isEmpty()) {
-                                    passwordMsg = "All fields are required."
-                                    passwordMsgType = "error"
-                                    return@Button
-                                }
-                                if (newPass.length < 6) {
-                                    passwordMsg = "New password must be at least 6 characters long."
-                                    passwordMsgType = "error"
-                                    return@Button
-                                }
-                                if (newPass != confirmNewPass) {
-                                    passwordMsg = "Passwords do not match."
-                                    passwordMsgType = "error"
-                                    return@Button
-                                }
-
-                                scope.launch {
-                                    passwordLoading = true
-                                    passwordMsg = ""
-                                    try {
-                                        EventHubApi.changePassword(token, currentPass, newPass)
-                                        passwordMsg = "Password changed successfully! 🎉"
-                                        passwordMsgType = "success"
-                                        currentPass = ""
-                                        newPass = ""
-                                        confirmNewPass = ""
-                                    } catch (e: Exception) {
-                                        passwordMsg = e.message ?: "Failed to update password."
-                                        passwordMsgType = "error"
-                                    } finally {
-                                        passwordLoading = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
-                            enabled = !passwordLoading
-                        ) {
-                            if (passwordLoading) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                            } else {
-                                Text("Update Password")
-                            }
-                        }
+                    Column {
+                        Text("Change Password", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                        Text("Update your account security credentials", fontSize = 11.sp, color = SubtitleTextColor)
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Navigate to change password",
+                        tint = SubtitleTextColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
 
         if (activeSubTab == "saved") {
-            item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2010,7 +2013,6 @@ fun ProfileTab(
                         Text("News", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
-            }
 
             val savedEventsArray = try { JSONArray(user.savedEventsJson) } catch (e: Exception) { JSONArray() }
             val savedNewsArray = try { JSONArray(user.savedNewsJson) } catch (e: Exception) { JSONArray() }
@@ -2030,16 +2032,14 @@ fun ProfileTab(
             }
 
             if (savedList.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No saved ${savedTypeTab} yet.", color = SubtitleTextColor, fontSize = 14.sp)
-                    }
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No saved ${savedTypeTab} yet.", color = SubtitleTextColor, fontSize = 14.sp)
                 }
             } else {
-                items(savedList) { itemObj ->
+                savedList.forEach { itemObj ->
                     val itemId = itemObj.optString("_id", "")
                     val itemTitle = itemObj.optString("title", "No Title")
                     val itemCategory = itemObj.optString("category", "General")
@@ -2137,9 +2137,8 @@ fun ProfileTab(
             }
         }
 
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-            OutlinedButton(
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedButton(
                 onClick = {
                     EventHubApi.clearSession(context)
                     onLogout()
@@ -2153,8 +2152,56 @@ fun ProfileTab(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Log Out", fontWeight = FontWeight.Bold)
             }
-        }
+            Spacer(modifier = Modifier.height(150.dp)) // Extra space to make list scrollable for pull-to-refresh
     }
+
+    IconButton(
+        onClick = {
+            scope.launch {
+                refreshing = true
+                try {
+                    val res = EventHubApi.getProfile(token)
+                    val userObj = res.getJSONObject("user")
+                    val savedName = userObj.getString("name")
+                    val savedPhone = userObj.optString("phone", "")
+                    val savedAvatar = userObj.optString("avatar", "")
+                    val savedEvs = userObj.optJSONArray("savedEvents")?.toString() ?: "[]"
+                    val savedNws = userObj.optJSONArray("savedNews")?.toString() ?: "[]"
+                    val id = userObj.optString("id", userObj.optString("_id", ""))
+
+                    EventHubApi.saveSession(
+                        context,
+                        token,
+                        id,
+                        savedName,
+                        user.email,
+                        savedPhone,
+                        savedAvatar,
+                        savedEvs,
+                        savedNws
+                    )
+                    user = EventHubApi.getSessionUser(context)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    refreshing = false
+                }
+            }
+        },
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(16.dp)
+            .background(Color(0xFFEEF2F6), CircleShape)
+            .size(36.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Refresh,
+            contentDescription = "Refresh Profile",
+            tint = Color(0xFF8B5CF6),
+            modifier = Modifier.size(20.dp)
+        )
+    }
+  }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -2247,15 +2294,21 @@ fun EventDetailScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             val imgUrl = ev.optString("image", "")
                             if (imgUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = EventHubApi.formatImageUrl(imgUrl),
-                                    contentDescription = "Event Cover",
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(140.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = EventHubApi.formatImageUrl(imgUrl),
+                                        contentDescription = "Event Cover",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
                             Text(ev.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
@@ -2298,7 +2351,8 @@ fun EventDetailScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            val isLiked = EventHubApi.isLiked(context, eventId)
+                            var isLikedState by remember(eventId, ev) { mutableStateOf(EventHubApi.isLiked(context, eventId)) }
+                            var likesCountState by remember(eventId, ev) { mutableStateOf(ev.optInt("likes", 0)) }
                             val title = ev.getString("title")
                             val category = ev.getString("category")
                             val description = ev.getString("description")
@@ -2311,28 +2365,33 @@ fun EventDetailScreen(
                                 Button(
                                     onClick = {
                                         scope.launch {
+                                            val likedNow = EventHubApi.toggleLike(context, eventId)
+                                            isLikedState = likedNow
+                                            val prevLikes = likesCountState
+                                            likesCountState = prevLikes + if (likedNow) 1 else -1
                                             try {
-                                                EventHubApi.toggleLike(context, eventId)
-                                                EventHubApi.toggleEventLike(token, eventId)
+                                                val res = EventHubApi.toggleEventLike(token, eventId, likedNow)
+                                                likesCountState = res.getInt("likes")
                                                 loadDetails()
                                             } catch (e: Exception) {
-                                                // Ignore
+                                                isLikedState = !likedNow
+                                                likesCountState = prevLikes
                                             }
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
-                                        contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                        containerColor = if (isLikedState) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                        contentColor = if (isLikedState) Color(0xFFEC4899) else Color(0xFF64748B)
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        imageVector = if (isLikedState) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = "Like"
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("${ev.optInt("likes", 0)}")
+                                    Text("$likesCountState")
                                 }
 
                                 Button(
@@ -2366,7 +2425,10 @@ fun EventDetailScreen(
                                                 putExtra(android.content.Intent.EXTRA_SUBJECT, title)
                                                 putExtra(android.content.Intent.EXTRA_TEXT, "Check out this event on EventHub: $title\nhttps://social-eetirp.vercel.app/events/$eventId")
                                             }
-                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                            val chooser = android.content.Intent.createChooser(shareIntent, "Share via").apply {
+                                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(chooser)
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
@@ -2595,15 +2657,21 @@ fun NewsDetailScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             val imgUrl = ns.optString("image", "")
                             if (imgUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = EventHubApi.formatImageUrl(imgUrl),
-                                    contentDescription = "News Cover",
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(140.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.Black.copy(alpha = 0.05f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AsyncImage(
+                                        model = EventHubApi.formatImageUrl(imgUrl),
+                                        contentDescription = "News Cover",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                             }
                             Text(ns.getString("title"), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
@@ -2619,7 +2687,8 @@ fun NewsDetailScreen(
 
                             Spacer(modifier = Modifier.height(20.dp))
 
-                            val isLiked = EventHubApi.isLiked(context, newsId)
+                            var isLikedState by remember(newsId, ns) { mutableStateOf(EventHubApi.isLiked(context, newsId)) }
+                            var likesCountState by remember(newsId, ns) { mutableStateOf(ns.optInt("likes", 0)) }
                             val title = ns.getString("title")
                             val category = ns.getString("category")
                             val summary = ns.optString("summary", "Read details...")
@@ -2632,28 +2701,33 @@ fun NewsDetailScreen(
                                 Button(
                                     onClick = {
                                         scope.launch {
+                                            val likedNow = EventHubApi.toggleLike(context, newsId)
+                                            isLikedState = likedNow
+                                            val prevLikes = likesCountState
+                                            likesCountState = prevLikes + if (likedNow) 1 else -1
                                             try {
-                                                EventHubApi.toggleLike(context, newsId)
-                                                EventHubApi.toggleNewsLike(token, newsId)
+                                                val res = EventHubApi.toggleNewsLike(token, newsId, likedNow)
+                                                likesCountState = res.getInt("likes")
                                                 loadDetails()
                                             } catch (e: Exception) {
-                                                // Ignore
+                                                isLikedState = !likedNow
+                                                likesCountState = prevLikes
                                             }
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isLiked) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
-                                        contentColor = if (isLiked) Color(0xFFEC4899) else Color(0xFF64748B)
+                                        containerColor = if (isLikedState) Color(0xFFFCE7F3) else Color(0xFFF1F5F9),
+                                        contentColor = if (isLikedState) Color(0xFFEC4899) else Color(0xFF64748B)
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        imageVector = if (isLikedState) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = "Like"
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("${ns.optInt("likes", 0)}")
+                                    Text("$likesCountState")
                                 }
 
                                 Button(
@@ -2687,7 +2761,10 @@ fun NewsDetailScreen(
                                                 putExtra(android.content.Intent.EXTRA_SUBJECT, title)
                                                 putExtra(android.content.Intent.EXTRA_TEXT, "Check out this news on EventHub: $title\nhttps://social-eetirp.vercel.app/news/$newsId")
                                             }
-                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share via"))
+                                            val chooser = android.content.Intent.createChooser(shareIntent, "Share via").apply {
+                                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(chooser)
                                         }
                                     },
                                     colors = ButtonDefaults.buttonColors(
@@ -2959,5 +3036,185 @@ fun uriToCompressedBase64(context: Context, uri: android.net.Uri): String {
     bitmap.recycle()
     
     return Base64.encodeToString(bytes, Base64.NO_WRAP)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChangePasswordScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val token = remember { EventHubApi.getSessionToken(context) ?: "" }
+
+    var currentPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var confirmNewPass by remember { mutableStateOf("") }
+    var showCurrentPass by remember { mutableStateOf(false) }
+    var showNewPass by remember { mutableStateOf(false) }
+    var showConfirmPass by remember { mutableStateOf(false) }
+    var passwordMsg by remember { mutableStateOf("") }
+    var passwordMsgType by remember { mutableStateOf("success") }
+    var passwordLoading by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Change Password", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundColor,
+                    titleContentColor = ContentTextColor,
+                    navigationIconContentColor = ContentTextColor
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(BackgroundColor)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = CardBgColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, CardBorderColor)
+            ) {
+                Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+                    Text("Change Password", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ContentTextColor)
+                    Text("Update your account credentials securely", fontSize = 11.sp, color = SubtitleTextColor)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (passwordMsg.isNotEmpty()) {
+                        Text(
+                            passwordMsg,
+                            color = if (passwordMsgType == "success") Color(0xFF065F46) else Color(0xFFDC2626),
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (passwordMsgType == "success") Color(0xFFD1FAE5) else Color(0xFFFEF2F2))
+                                .padding(10.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    OutlinedTextField(
+                        value = currentPass,
+                        onValueChange = { currentPass = it },
+                        label = { Text("Current Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (showCurrentPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showCurrentPass = !showCurrentPass }) {
+                                Icon(
+                                    imageVector = if (showCurrentPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility",
+                                    tint = SubtitleTextColor
+                                )
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = { newPass = it },
+                        label = { Text("New Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (showNewPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showNewPass = !showNewPass }) {
+                                Icon(
+                                    imageVector = if (showNewPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility",
+                                    tint = SubtitleTextColor
+                                )
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = confirmNewPass,
+                        onValueChange = { confirmNewPass = it },
+                        label = { Text("Retype New Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (showConfirmPass) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showConfirmPass = !showConfirmPass }) {
+                                Icon(
+                                    imageVector = if (showConfirmPass) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle Visibility",
+                                    tint = SubtitleTextColor
+                                )
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            if (currentPass.isEmpty() || newPass.isEmpty()) {
+                                passwordMsg = "All fields are required."
+                                passwordMsgType = "error"
+                                return@Button
+                            }
+                            if (newPass.length < 6) {
+                                passwordMsg = "New password must be at least 6 characters long."
+                                passwordMsgType = "error"
+                                return@Button
+                            }
+                            if (newPass != confirmNewPass) {
+                                passwordMsg = "Passwords do not match."
+                                passwordMsgType = "error"
+                                return@Button
+                            }
+
+                            scope.launch {
+                                passwordLoading = true
+                                passwordMsg = ""
+                                try {
+                                    EventHubApi.changePassword(token, currentPass, newPass)
+                                    passwordMsg = "Password changed successfully! 🎉"
+                                    passwordMsgType = "success"
+                                    currentPass = ""
+                                    newPass = ""
+                                    confirmNewPass = ""
+                                } catch (e: Exception) {
+                                    passwordMsg = e.message ?: "Failed to update password."
+                                    passwordMsgType = "error"
+                                } finally {
+                                    passwordLoading = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                        enabled = !passwordLoading
+                    ) {
+                        if (passwordLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Update Password")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 

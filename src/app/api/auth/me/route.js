@@ -68,12 +68,7 @@ export async function PUT(req) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      const updateFields = { name, avatar };
-      if (!existingUser.phone && phone) {
-        updateFields.phone = phone;
-      } else if (existingUser.phone && phone && existingUser.phone !== phone) {
-        return NextResponse.json({ error: 'Phone number cannot be modified once set.' }, { status: 400 });
-      }
+      const updateFields = { name, avatar, phone: phone || '' };
 
       const updatedUser = await User.findByIdAndUpdate(
         decoded.id,

@@ -47,7 +47,7 @@ export async function POST(req) {
     return NextResponse.json({
       token,
       role: 'user',
-      user: { id: newUser._id, name: newUser.name, email: newUser.email, avatar: newUser.avatar }
+      user: { id: newUser._id, name: newUser.name, email: newUser.email, avatar: newUser.avatar, phone: newUser.phone }
     }, { status: 201 });
   } catch (e) {
     console.error('Signup error:', e);
