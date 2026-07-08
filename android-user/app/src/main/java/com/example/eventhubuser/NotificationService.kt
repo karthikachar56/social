@@ -80,6 +80,8 @@ class NotificationService : Service() {
         }
     }
 
+    private val UPDATE_NOTIF_ID = 8888
+
     private suspend fun checkForUpdates() {
         try {
             val versionInfo = EventHubApi.getLatestVersionInfo()
@@ -88,13 +90,38 @@ class NotificationService : Service() {
             
             if (serverVersionCode > currentVersionCode) {
                 val apkUrl = versionInfo.optString("apkUrl", "")
-                if (apkUrl.isNotEmpty()) {
-                    downloadAndInstallApk(applicationContext, apkUrl)
-                }
+                EventHubApi.setUpdateAvailable(applicationContext, true, apkUrl)
+                triggerUpdateSystemNotification()
+            } else {
+                EventHubApi.setUpdateAvailable(applicationContext, false)
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.cancel(UPDATE_NOTIF_ID)
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun triggerUpdateSystemNotification() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("App Update Required")
+            .setContentText("A new version of EventHub is available. Tap to install.")
+            .setSmallIcon(com.example.eventhubuser.R.mipmap.ic_launcher)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        manager.notify(UPDATE_NOTIF_ID, notification)
     }
 
     private fun getAppVersionCode(context: Context): Int {
@@ -108,41 +135,6 @@ class NotificationService : Service() {
         } catch (e: Exception) {
             1
         }
-    }
-
-    private suspend fun downloadAndInstallApk(context: Context, apkUrl: String) = withContext(Dispatchers.IO) {
-        try {
-            val url = URL(apkUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.connect()
-
-            if (connection.responseCode in 200..299) {
-                val apkFile = File(context.cacheDir, "eventhub_update.apk")
-                connection.inputStream.use { input ->
-                    apkFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                
-                launchApkInstallation(context, apkFile)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun launchApkInstallation(context: Context, apkFile: File) {
-        val authority = "${context.packageName}.fileprovider"
-        val apkUri = androidx.core.content.FileProvider.getUriForFile(context, authority, apkFile)
-        
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }
-        context.startActivity(intent)
     }
 
     private suspend fun checkForNewNotifications(token: String) {
