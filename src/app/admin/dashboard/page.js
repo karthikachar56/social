@@ -452,12 +452,8 @@ export default function AdminDashboard() {
         const evData = await evRes.json();
         const nwData = await nwRes.json();
         
-        const currentAdminId = user?.id || user?._id;
-        const myEvents = evData.filter(e => e.adminId === currentAdminId);
-        const myNews = nwData.filter(n => n.adminId === currentAdminId);
-        
-        setEvents(myEvents);
-        setNews(myNews);
+        setEvents(evData);
+        setNews(nwData);
       }
 
       if (usrRes && usrRes.ok) {
