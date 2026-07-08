@@ -80,6 +80,8 @@ class NotificationService : Service() {
         }
     }
 
+    private val UPDATE_NOTIF_ID = 8888
+
     private suspend fun checkForUpdates() {
         try {
             val versionInfo = EventHubApi.getLatestVersionInfo()
@@ -88,13 +90,38 @@ class NotificationService : Service() {
             
             if (serverVersionCode > currentVersionCode) {
                 val apkUrl = versionInfo.optString("apkUrl", "")
-                if (apkUrl.isNotEmpty()) {
-                    EventHubApi.downloadAndInstallApk(applicationContext, apkUrl)
-                }
+                EventHubApi.setUpdateAvailable(applicationContext, true, apkUrl)
+                triggerUpdateSystemNotification()
+            } else {
+                EventHubApi.setUpdateAvailable(applicationContext, false)
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                manager.cancel(UPDATE_NOTIF_ID)
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun triggerUpdateSystemNotification() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("App Update Required")
+            .setContentText("A new version of EventHub Admin is available. Tap to install.")
+            .setSmallIcon(com.example.eventhubadmin.R.mipmap.ic_launcher)
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        manager.notify(UPDATE_NOTIF_ID, notification)
     }
 
     private fun getAppVersionCode(context: Context): Int {

@@ -343,6 +343,25 @@ object EventHubApi {
         return JSONObject(apiRequest("/version-admin.json", "GET"))
     }
 
+    fun setUpdateAvailable(context: Context, available: Boolean, apkUrl: String = "") {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putBoolean("update_available", available)
+            putString("latest_apk_url", apkUrl)
+            apply()
+        }
+    }
+
+    fun isUpdateAvailable(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("update_available", false)
+    }
+
+    fun getLatestApkUrl(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString("latest_apk_url", "") ?: ""
+    }
+
     suspend fun downloadAndInstallApk(context: Context, apkUrl: String) = withContext(Dispatchers.IO) {
         try {
             val url = URL(apkUrl)
