@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import android.content.Intent
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -336,6 +337,44 @@ object EventHubApi {
     fun setDarkTheme(context: Context, isDark: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean("dark_theme", isDark).apply()
+    }
+
+    suspend fun getLatestVersionInfo(): JSONObject {
+        return JSONObject(apiRequest("/version-admin.json", "GET"))
+    }
+
+    suspend fun downloadAndInstallApk(context: Context, apkUrl: String) = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(apkUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+            connection.connect()
+
+            if (connection.responseCode in 200..299) {
+                val apkFile = File(context.cacheDir, "eventhub_admin_update.apk")
+                connection.inputStream.use { input ->
+                    apkFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                launchApkInstallation(context, apkFile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun launchApkInstallation(context: Context, apkFile: File) {
+        val authority = "${context.packageName}.fileprovider"
+        val apkUri = androidx.core.content.FileProvider.getUriForFile(context, authority, apkFile)
+        
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        context.startActivity(intent)
     }
 }
 
