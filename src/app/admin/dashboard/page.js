@@ -987,8 +987,19 @@ export default function AdminDashboard() {
           </button>
         </nav>
 
+        {/* APK Download Link */}
+        <div className="border-t border-slate-200/50 pt-3 mt-auto">
+          <a 
+            href="/eventhub-admin.apk" 
+            download="eventhub-admin.apk"
+            className="nav-item w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-semibold transition flex items-center justify-center gap-2 py-2.5 rounded-xl shadow-md shadow-purple-500/10 hover:shadow-purple-500/20"
+          >
+            <Download className="w-4 h-4 flex-shrink-0 text-white" /> Download Admin App (.apk)
+          </a>
+        </div>
+
         {/* Logout */}
-        <button onClick={logout} className="nav-item w-full mt-4 border border-red-900/30 text-red-400 hover:bg-red-950/10 hover:text-red-300">
+        <button onClick={logout} className="nav-item w-full mt-3 border border-red-900/30 text-red-400 hover:bg-red-950/10 hover:text-red-300">
           <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
         </button>
       </aside>
