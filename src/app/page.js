@@ -507,8 +507,8 @@ export default function Home() {
           
           <div className="flex items-center gap-3">
             <a 
-              href="/eventhub-user.apk" 
-              download="eventhub-user.apk"
+              href="/eventhub-user-release.apk" 
+              download="eventhub-user-release.apk"
               className="px-3 py-1.5 rounded-xl border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100/80 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:shadow"
               title="Download Android App (.apk)"
             >
@@ -636,8 +636,8 @@ export default function Home() {
           <p className="text-slate-500 text-base sm:text-lg mb-6 max-w-xl mx-auto">Your central hub for everything happening. Stay informed with events and updates posted by our team of admins.</p>
           <div className="mb-10 flex flex-col sm:flex-row justify-center items-center gap-3">
             <a 
-              href="/eventhub-user.apk" 
-              download="eventhub-user.apk"
+              href="/eventhub-user-release.apk" 
+              download="eventhub-user-release.apk"
               className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold text-sm shadow-lg shadow-purple-600/25 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4 text-white" /> Download EventHub Android App (.apk)

@@ -1,0 +1,14 @@
+- [x] Import `Download` and `Share2` icons in Web `page.js`.
+- [x] Update destructuring of `useAuth()` in Web `page.js`.
+- [x] Initialize feed state variables in Web `page.js`.
+- [x] Unlock phone number in backend `PUT /api/auth/me`
+- [x] Return phone number in backend `POST /api/auth/login`
+- [x] Return phone number in backend `POST /api/auth/signup`
+- [x] Implement feed interaction handlers in Web `page.js`.
+- [x] Add `analytics` to page title and subtitle mapping tables.
+- [x] Add sidebar button for Analytics in Web `page.js`.
+- [x] Implement user-facing feed view under `page === 'dashboard'` in Web `page.js`.
+- [x] Implement statistics dashboard view under `page === 'analytics'` in Web `page.js`.
+- [x] Render feed details modal at bottom of Web `page.js` JSX.
+- [x] Compile and verify Next.js Web App.
+- [x] Restructure Android Admin APK tabs and compile check.

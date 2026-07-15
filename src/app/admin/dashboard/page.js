@@ -986,8 +986,8 @@ export default function AdminDashboard() {
         {/* APK Download Link */}
         <div className="border-t border-slate-200/50 pt-3 mt-auto">
           <a 
-            href="/eventhub-admin.apk" 
-            download="eventhub-admin.apk"
+            href="/eventhub-admin-release.apk" 
+            download="eventhub-admin-release.apk"
             className="nav-item w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-semibold transition flex items-center justify-center gap-2 py-2.5 rounded-xl shadow-md shadow-purple-500/10 hover:shadow-purple-500/20"
           >
             <Download className="w-4 h-4 flex-shrink-0 text-white" /> Download Admin App (.apk)

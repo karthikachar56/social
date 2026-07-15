@@ -177,8 +177,8 @@ export default function RegisterPage() {
             </p>
             <div className="pt-2">
               <a 
-                href="/eventhub-user.apk" 
-                download="eventhub-user.apk"
+                href="/eventhub-user-release.apk" 
+                download="eventhub-user-release.apk"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-50 border border-purple-100 hover:bg-purple-100/70 text-xs font-bold text-purple-700 transition"
               >
                 <Download className="w-3.5 h-3.5" /> Download EventHub Android App (.apk)
